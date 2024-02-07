@@ -17,7 +17,7 @@ class ChargerParameters(BaseModel):
     # executed_charging_schedule: Schedule = None
 
     class Config:
-        orm_mode=True
+        from_attributes=True
 
 class ConfigParameters(BaseModel):
     address:str
@@ -27,9 +27,9 @@ class ConfigParameters(BaseModel):
     # executed_charging_schedule: Schedule = None
 
     class Config:
-        orm_mode=True
+        from_attributes=True
 
-class ScheduleParameters(BaseModel):
+class ClusterSincData(BaseModel):
     selected_max_power: int = None
     planned_departure: datetime = None
     user_id: int
@@ -40,9 +40,9 @@ class ScheduleParameters(BaseModel):
     # executed_charging_schedule: Schedule = None
 
     class Config:
-        orm_mode=True
+        from_attributes=True
 
-class SimulationParameters(BaseModel):
+class EvseDataSim(BaseModel):
     plug_status: str
     authenticated: bool
     user_id: int
@@ -53,4 +53,4 @@ class SimulationParameters(BaseModel):
     # executed_charging_schedule: Schedule = None
 
     class Config:
-        orm_mode=True
+        from_attributes=True

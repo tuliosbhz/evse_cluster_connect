@@ -5,6 +5,7 @@ import random
 from collections import defaultdict
 sys.path.append("../")
 from pysyncobj import SyncObj, replicated, SyncObjConf, FAIL_REASON
+import numpy as np
 
 class TestObj(SyncObj):
 
@@ -28,12 +29,16 @@ _g_success = 0
 _g_error = 0
 _g_errors = defaultdict(int)
 _g_delays = []
-
+#Função de callback que cria uma lista com os valores dos delays em cada transação
+"""
+Considera no caso de sucesso (FAIL_REASON.SUCCESS) 
+"""
 def clbck(res, err):
     global _g_error, _g_success, _g_delays
     if err == FAIL_REASON.SUCCESS:
         _g_success += 1
         callTime, recvTime = res
+        #Porque não utiliza recvTime: Verificar diferença
         delay = time.time() - callTime
         _g_delays.append(delay)
     else:
@@ -49,7 +54,7 @@ if __name__ == '__main__':
         print('Usage: %s RPS requestSize selfHost:port partner1Host:port partner2Host:port ...' % sys.argv[0])
         sys.exit(-1)
 
-    numCommands = int(sys.argv[1])
+    numCommands = round(float(sys.argv[1]))
     cmdSize = int(sys.argv[2])
 
     selfAddr = sys.argv[3]
@@ -58,7 +63,7 @@ if __name__ == '__main__':
     partners = sys.argv[4:]
 
     maxCommandsQueueSize = int(0.9 * SyncObjConf().commandsQueueSize / len(partners))
-
+    #Instancia objeto de teste
     obj = TestObj(selfAddr, partners)
 
     while obj._getLeader() is None:
@@ -67,23 +72,31 @@ if __name__ == '__main__':
     time.sleep(4.0)
 
     startTime = time.time()
-
+    #Compara tempo atual com tempo de inicio do teste (Somente faz o teste por 25 segundos)
     while time.time() - startTime < 25.0:
+        #Regista tempo antes de iniciar uma transação
         st = time.time()
-        for i in xrange(0, numCommands):
+        for i in range(0, numCommands):
+            #Envia uma transação nova
             obj.testMethod(getRandStr(cmdSize), time.time(), callback=clbck)
             _g_sent += 1
+        #Calcula tempo de transação
         delta = time.time() - st
+        #Verifica que transação durou menos de 1 segundo
         assert delta <= 1.0
+        #Sempre espera 1 segundo, pois considera o atraso de retorno da transação
         time.sleep(1.0 - delta)
-
+    #Tempo para estabilizar a rede de consenso
     time.sleep(4.0)
 
     successRate = float(_g_success) / float(_g_sent)
+    print(f"G_SENT: {_g_sent} vs GET_NUM_COMMANDS_APPLIED {obj.getNumCommandsApplied()} ")
     print('SUCCESS RATE:', successRate)
 
     delays = sorted(_g_delays)
-    avgDelay = _g_delays[len(_g_delays) / 2]
+    delays = np.array(delays)
+    avgDelay = delays.mean()
+    #avgDelay = _g_delays[len(_g_delays) / 2]
     print('AVG DELAY:', avgDelay)
 
     if successRate < 0.9:

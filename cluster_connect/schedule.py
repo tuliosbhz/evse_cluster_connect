@@ -22,13 +22,14 @@ class Schedule():
         self.chargingRateUnit = charging_rate_unit  # "W"
         self.duration = duration
         self.chargingSchedulePeriod = charging_schedule_period
-        self.currentSchedule:dict = charging_schedule_period[0]
-        self.currentStartPeriod = charging_schedule_period[0]["startPeriod"]
-        self.currentLimit = charging_schedule_period[0]["limit"]
+        self.currentPeriodIndex = 0
+        self.currentPeriod:dict = charging_schedule_period[self.currentPeriodIndex]
+        self.currentStartPeriod = charging_schedule_period[self.currentPeriodIndex]["startPeriod"]
+        self.currentLimit = charging_schedule_period[self.currentPeriodIndex]["limit"]
         self.currentDuration = 0.0  # self.calculate_current_duration()
         self._currentTime = datetime.datetime.now()
         self._remainingTime = 0.0 # Tempo que resta para cumprir o período atual do planeamento
-        self.currentSchedulePeriodIndex = 0
+        
 
     #########################################################################
     ## Metodos para reconfigurar parâmetros do planeamento de carregamento ##
@@ -48,6 +49,25 @@ class Schedule():
     def set_charging_schedule_period(self, charging_schedule_period:list):
         self.chargingSchedulePeriod = charging_schedule_period
 
+    ###########################################################################
+    ## Metodos para obter dados transformados do planeamento de carregamento ##
+    ###########################################################################
+    def get_limit_list(self):
+        limitList = [self.chargingSchedulePeriod[period]["limit"] for period in self.chargingSchedulePeriod]
+        return limitList
+    
+    def get_start_period_list(self):
+        startPeriodList = [self.chargingSchedulePeriod[period]["startPeriod"] for period in self.chargingSchedulePeriod]
+        return startPeriodList
+    
+    def get_duration_period_list(self):
+        duration_list = [delta.total_seconds() for delta in
+              (self.chargingSchedulePeriod[i + 1]["startPeriod"] -
+               self.chargingSchedulePeriod[i]["startPeriod"]
+               for i in range(len(self.chargingSchedulePeriod) - 1))]
+        duration_list.append(self.duration)
+        return duration_list
+    
     ##########################################################################
     #### Metodos para acompanhar o schedule recebido em tempo real ###########
     ##########################################################################
@@ -64,7 +84,7 @@ class Schedule():
         self.currentDuration = self.get_current_duration()
         remaining_time = self.currentDuration - time_difference.total_seconds()
         if remaining_time < 1:
-            if self.currentSchedulePeriodIndex < len(self.chargingSchedulePeriod):
+            if self.currentPeriodIndex < len(self.chargingSchedulePeriod):
                 time_difference = self.currentTime - self.currentStartPeriod
                 remaining_time = self.currentDuration - time_difference.total_seconds()
             else:
@@ -74,28 +94,28 @@ class Schedule():
 
     def __get_current_schedule(self):
         #Atualiza internamente para o schedule atual e depois retorna o schedule atual
-        self.currentSchedule = self.chargingSchedulePeriod[self.currentSchedulePeriodIndex]
-        return self.currentSchedule
+        self.currentPeriod = self.chargingSchedulePeriod[self.currentPeriodIndex]
+        return self.currentPeriod
 
     def get_current_start_period(self):
-        currentSchedule = self.__get_current_schedule()
-        self.currentStartPeriod = currentSchedule["startPeriod"]
+        currentPeriod = self.__get_current_schedule()
+        self.currentStartPeriod = currentPeriod["startPeriod"]
         return self.currentStartPeriod
 
     def get_current_limit(self):
-        currentSchedule = self.__get_current_schedule()
-        self.currentLimit = currentSchedule["limit"]
+        currentPeriod = self.__get_current_schedule()
+        self.currentLimit = currentPeriod["limit"]
         return self.currentLimit
     
     def set_current_period_index(self):
-        if self.remainingTime < 1 and (self.currentSchedulePeriodIndex + 1 < len(self.chargingSchedulePeriod)):
-            self.currentSchedulePeriodIndex += 1
+        if self.remainingTime < 1 and (self.currentPeriodIndex + 1 < len(self.chargingSchedulePeriod)):
+            self.currentPeriodIndex += 1
     
     def get_current_duration(self):
-        if self.currentSchedulePeriodIndex + 1 < len(self.chargingSchedulePeriod):
+        if self.currentPeriodIndex + 1 < len(self.chargingSchedulePeriod):
             #Calcula o intervalo temporal
-            delta = (self.chargingSchedulePeriod[self.currentSchedulePeriodIndex + 1]["startPeriod"]-
-                    self.chargingSchedulePeriod[self.currentSchedulePeriodIndex]["startPeriod"])
+            delta = (self.chargingSchedulePeriod[self.currentPeriodIndex + 1]["startPeriod"]-
+                    self.chargingSchedulePeriod[self.currentPeriodIndex]["startPeriod"])
             self.currentDuration = delta.total_seconds()
         else:
             #Utiliza a duração fornecida na criação da classe

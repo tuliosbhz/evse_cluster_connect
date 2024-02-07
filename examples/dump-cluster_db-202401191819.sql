@@ -73,13 +73,13 @@ INSERT INTO `Schedule` VALUES (1,'2024-01-19 12:28:05',3333,NULL,1,'000000000000
 UNLOCK TABLES;
 
 --
--- Table structure for table `Simulation`
+-- Table structure for table `EvseDataSimTable`
 --
 
-DROP TABLE IF EXISTS `Simulation`;
+DROP TABLE IF EXISTS `EvseDataSimTable`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `Simulation` (
+CREATE TABLE `EvseDataSimTable` (
   `register_id` int NOT NULL AUTO_INCREMENT,
   `timestamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `plug_status` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
@@ -93,13 +93,13 @@ CREATE TABLE `Simulation` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `Simulation`
+-- Dumping data for table `EvseDataSimTable`
 --
 
-LOCK TABLES `Simulation` WRITE;
-/*!40000 ALTER TABLE `Simulation` DISABLE KEYS */;
-INSERT INTO `Simulation` VALUES (1,'2024-01-19 12:28:00','plugged_not_charging',0,1,'0000000000000000','inescevse001',10000),(2,'2024-01-19 12:29:53','plugged_not_charging',0,0,'0000000000000000','inescevse002',4000),(3,'2024-01-19 12:28:44','charging',0,3,'0000000000000000','inescevse003',14000);
-/*!40000 ALTER TABLE `Simulation` ENABLE KEYS */;
+LOCK TABLES `EvseDataSimTable` WRITE;
+/*!40000 ALTER TABLE `EvseDataSimTable` DISABLE KEYS */;
+INSERT INTO `EvseDataSimTable` VALUES (1,'2024-01-19 12:28:00','plugged_not_charging',0,1,'0000000000000000','inescevse001',10000),(2,'2024-01-19 12:29:53','plugged_not_charging',0,0,'0000000000000000','inescevse002',4000),(3,'2024-01-19 12:28:44','charging',0,3,'0000000000000000','inescevse003',14000);
+/*!40000 ALTER TABLE `EvseDataSimTable` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --

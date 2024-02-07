@@ -13,7 +13,8 @@ MAX_RPS = 40000
 def memoize(fileName):
     def doMemoize(func):
         if os.path.exists(fileName):
-            with open(fileName) as f:
+            with open(fileName, 'rb') as f:
+                print(f"F line 17 {f}")
                 cache = pickle.load(f)
         else:
             cache = {}
@@ -26,24 +27,29 @@ def memoize(fileName):
             return cache[args]
         return wrap
     return doMemoize
-
+#Calcula a taxa de sucesso para diferentes valores de débito (pedidos por segundo)
 def singleBenchmark(requestsPerSecond, requestSize, numNodes, numNodesReadonly = 0, delay = False):
+    #Pedidos por segundo por cada nó, valor útil para comparar com execução em um único nó
     rpsPerNode = requestsPerSecond / (numNodes + numNodesReadonly)
     cmd = [sys.executable, 'testobj_delay.py' if delay else 'testobj.py', str(rpsPerNode), str(requestSize)]
     #cmd = 'python2.7 -m cProfile -s time testobj.py %d %d' % (rpsPerNode, requestSize)
     processes = []
     allAddrs = []
+    #Cria endereços para nós na quantidade contida em numNodes
     for i in range(numNodes):
         allAddrs.append('localhost:%d' % (START_PORT + i))
+    #Corre cada nó (servidor RAFT) individualmente em um processo diferente internamente
     for i in range(numNodes):
         addrs = list(allAddrs)
         selfAddr = addrs.pop(i)
         p = Popen(cmd + [selfAddr] + addrs, stdin=PIPE)
         processes.append(p)
+    #Cria os nós que são readonly
     for i in range(numNodesReadonly):
         p = Popen(cmd + ['readonly'] + allAddrs, stdin=PIPE)
         processes.append(p)
     errRates = []
+
     for p in processes:
         p.communicate()
         errRates.append(float(p.returncode) / 100.0)
@@ -88,12 +94,14 @@ if __name__ == '__main__':
 
     mode = sys.argv[1]
     if mode == 'delay':
+        #TODO: realizar testes consistentes com número dinâmico de Pedidos por segundo, Tamanho dos pedidos e Número de nós
         print('Average delay:', singleBenchmark(50, 10, 5, delay=True))
     elif mode == 'rps':
+        #Varia o valor do tamanho dos requests e recebe o máximo do pedidos por segundo possíveis
         for i in range(10, 2100, 500):
             res = detectMaxRps(i, 3)
             print('request size: %d, rps: %d' % (i, int(res)))
-
+        #Varia o número de nós e verifica
         for i in range(3, 8):
             res = detectMaxRps(200, i)
             print('nodes number: %d, rps: %d' % (i, int(res)))

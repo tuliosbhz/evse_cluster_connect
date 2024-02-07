@@ -9,7 +9,7 @@ from pysyncobj import SyncObj, replicated
 from random import randint
 import numpy as np
 import datetime
-from schedule import Schedule
+from cluster_connect.schedule import Schedule
 
 class Charger(SyncObj):
 

@@ -1,6 +1,6 @@
 import unittest
 from datetime import datetime, timedelta
-from schedule import Schedule  # Replace 'your_module' with the actual module name
+from cluster_connect.schedule import Schedule  # Replace 'your_module' with the actual module name
 import time
 
 class TestScheduleClass(unittest.TestCase):
@@ -11,9 +11,9 @@ class TestScheduleClass(unittest.TestCase):
         charging_schedule_period = [
             # {"startPeriod": datetime(2022, 1, 1, 12, 0, 0), "limit": 100},
             # {"startPeriod": datetime(2022, 1, 1, 12, 0, 30), "limit": 50},
-            {"startPeriod": current_time, "limit": 100},
-            {"startPeriod": current_time + timedelta(seconds=3), "limit": 50},
-            {"startPeriod": current_time + timedelta(seconds=6), "limit": 2000},
+            {"startPeriod": current_time, "limit": 7400},
+            {"startPeriod": current_time + timedelta(seconds=3), "limit": 3000},
+            {"startPeriod": current_time + timedelta(seconds=6), "limit": 1380},
             # Add more periods as needed
         ]
 
@@ -21,7 +21,7 @@ class TestScheduleClass(unittest.TestCase):
             evse_id="EV1",
             id=1,
             charging_rate_unit="W",
-            duration=9,  # 1 hour in seconds
+            duration=9,  # 9 seconds on last inteval
             charging_schedule_period=charging_schedule_period
         )
     

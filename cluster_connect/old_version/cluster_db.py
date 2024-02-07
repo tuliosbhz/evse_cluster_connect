@@ -38,8 +38,8 @@ class Configuration(Base):
 """
 Resultado do calculo do sistema distritibuido do selected_max_power para cada carregador
 """
-class ScheduleTable(Base):
-    __tablename__ = "Schedule"
+class ClusterSincDataTable(Base):
+    __tablename__ = "clusterSincData"
     register_id = sqlalchemy.Column(sqlalchemy.INT, primary_key=True)
     timestamp =  sqlalchemy.Column(sqlalchemy.INT, nullable=False, default="CURRENT_TIMESTAMP")
     selected_max_power = sqlalchemy.Column(sqlalchemy.INT, nullable=False)
@@ -53,8 +53,8 @@ class ScheduleTable(Base):
 Tabela que será substituida por acesso a tabelas da base de dados evsedb_local para atualizar os dados da aplicação
 Para interagir com a aplicação essa vai ser a tabela em que os dados serão alterados enquanto corre a aplicação
 """
-class Simulation(Base):
-    __tablename__ = "Simulation"
+class EvseDataSimTable(Base):
+    __tablename__ = "evseDataSim"
     register_id = sqlalchemy.Column(sqlalchemy.INT, primary_key=True)
     timestamp =  sqlalchemy.Column(sqlalchemy.INT, nullable=False, default="CURRENT_TIMESTAMP")
     plug_status = sqlalchemy.Column(sqlalchemy.String(100), nullable=False)
