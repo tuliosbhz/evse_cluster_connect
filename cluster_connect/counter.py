@@ -62,6 +62,7 @@ if __name__ == '__main__':
             old_value = o.getCounter()
             print(old_value)
         if o._getLeader() is None:
+            print(o.__selfNode.address)
             continue
         # if n < 2000:
         if n < 20:
