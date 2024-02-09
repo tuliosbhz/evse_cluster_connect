@@ -74,6 +74,19 @@ def read_ip_port_file(file_path):
             ip_port_list.append(str(ip_port))
     return ip_port_list
 
+def separate_ip_port(ip_port_str):
+    # Split the string by ':'
+    parts = ip_port_str.split(':')
+    
+    # Check if there are exactly two parts (IP and Port)
+    if len(parts) == 2:
+        ip = parts[0]
+        port = parts[1]
+        return ip, port
+    else:
+        # If the format is incorrect, return None for both IP and Port
+        return None, None
+
 def perNodeBenchmark(requestsPerSecond, requestSize, addrs_filename:str=None, numNodesReadonly=0, delay=False):
     cmd = [sys.executable, 'testobj_kpi.py' if delay else 'testobj.py', str(requestsPerSecond), str(requestSize)]
     allAddrs = []
@@ -85,8 +98,10 @@ def perNodeBenchmark(requestsPerSecond, requestSize, addrs_filename:str=None, nu
         allAddrs = read_ip_port_file("nodes_addrs.txt")
     print(f"All addresses: {allAddrs}")
     selfAddr = ip_address_assign()
-    selfAddr = f"{selfAddr}:{START_PORT}"
-    selfAddr = selfAddr.strip()
+    for addr in allAddrs:
+        ip,port = separate_ip_port(addr)
+        if selfAddr == ip:
+            selfAddr = f"{selfAddr}:{port}"
     print(f"Self Address: {selfAddr}")
     if selfAddr:
         allAddrs.remove(selfAddr)
