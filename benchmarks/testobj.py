@@ -31,7 +31,9 @@ def clbck(res, err):
     else:
         _g_error += 1
         _g_errors[err] += 1
-
+"""
+Método que cria uma função aleatória
+"""
 def getRandStr(l):
     f = '%0' + str(l) + 'x'
     return f % random.randrange(16 ** l)
@@ -61,7 +63,7 @@ if __name__ == '__main__':
 
     startTime = time.time()
 
-    while time.time() - startTime < 25.0:
+    while time.time() - startTime < 10.0:
         st = time.time()
         # for i in xrange(0, numCommands): # python2.7
         for i in range(0, numCommands):

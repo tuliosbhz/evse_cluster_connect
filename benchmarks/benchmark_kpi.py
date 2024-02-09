@@ -5,12 +5,13 @@ from functools import wraps
 from subprocess import Popen, PIPE
 import os
 import pandas as pd
-
+import json
 DEVNULL = open(os.devnull, 'wb')
 
 START_PORT = 4321
 MIN_RPS = 10
-MAX_RPS = 40000
+#MAX_RPS = 40000
+MAX_RPS = 10000
 
 def memoize(fileName):
     def doMemoize(func):
@@ -33,7 +34,7 @@ def memoize(fileName):
 def singleBenchmark(requestsPerSecond, requestSize, numNodes, numNodesReadonly=0, delay=False):
     # Pedidos por segundo por cada nó, valor útil para comparar com execução em um único nó
     rpsPerNode = requestsPerSecond / (numNodes + numNodesReadonly)
-    cmd = [sys.executable, 'testobj_debito.py' if delay else 'testobj_debito.py', str(rpsPerNode), str(requestSize)]
+    cmd = [sys.executable, 'testobj_kpi.py' if delay else 'testobj.py', str(rpsPerNode), str(requestSize)]
     processes = []
     allAddrs = []
 
@@ -98,7 +99,7 @@ def detectMaxRps(requestSize, numNodes):
 def init_results(filename):
     # If the file doesn't exist, create a new DataFrame and save it to the file
     data = [[0,0,0,0.0,0,0,0,""],]
-    df = pd.DataFrame(data, columns=['Request Size', 'Num Nodes', 'RPS', "Success Rate", "Total Requests", "Total Time", "Network Threshold", "Node Adress"])
+    df = pd.DataFrame(data, columns=['Request Size', 'Num Nodes', 'Max RPS', "Success Rate"])
     df.to_csv(filename, index=False)
     print(f"New DataFrame saved to {filename}")
 
@@ -121,7 +122,7 @@ def update_csv_inplace(csv_path, num_nodes_filter, update_column, update_value):
     print(f"Updated DataFrame saved to {csv_path}")
 
 def printUsage():
-    print('Usage: %s mode(latencia/debito/custom)' % sys.argv[0])
+    print('Usage: %s mode(rps/kpi/custom)' % sys.argv[0])
     sys.exit(-1)
 
 if __name__ == '__main__':
@@ -130,27 +131,41 @@ if __name__ == '__main__':
 
     mode = sys.argv[1]
     results_data = []
-    init_results("resultado_experimento.csv")
+    #init_results("resultado_experimento.csv")
     #Teste de número de nós na rede de 2 até 659 que é o valor de carregadores existentes na cidade do porto
-    if mode == 'debito':
+    if mode == 'kpi':
         # TODO: realizar testes consistentes com número dinâmico de Pedidos por segundo, Tamanho dos pedidos e Número de nós
         # TODO: realizar testes consistentes com número dinâmico de Pedidos por segundo, Tamanho dos pedidos e Número de nós
         request_size = 10
         for num_nodes in range(2,11):
             print(f"NUM NODES: {num_nodes}")
-            requests_per_second = num_nodes * 2
-            res = singleBenchmark(requests_per_second, request_size, num_nodes, delay=True)
-            # ['Request Size', 'Num Nodes', 'RPS', "Success Rate","Total Requests", "Total Time", "Limite Rede"]
-            #update_csv_inplace('resultado_experimento.csv', num_nodes, "RPS", requests_per_second)
-            # results_data.append([requests_per_second, request_size, num_nodes, requests_per_second,
-            #                      res[0], res[1], res[2]],)
-    elif mode == 'latencia':
-        # Varia o valor do tamanho dos requests e recebe o máximo do pedidos por segundo possíveis
-        for i in range(10, 2100, 500):
+            #requests_per_second = num_nodes * 2
+            for rps in range(MIN_RPS, MAX_RPS,500):
+                res = singleBenchmark(rps, request_size, num_nodes, delay=True)
+    elif mode == 'rps':
+        print("MAX RPS varying the request size")
+        for i in range(10, 5000, 100):
+            print("MAX RPS varying the number of nodes")
+            for j in range(2, 24):
+                print(f"NUM_NODES: {j} | {i} req size")
+                res = detectMaxRps(i, j)
+                results_data.append([i, j, int(res)])
+        print(f"Results req size: {results_data}")
+        #Varia o número de nós e verifica o valor da 
+        #taxa de pedidos por segundo com taxa de sucesso de 90%
+        print(f"Results total: {results_data}")
+        filename = "results/" + "max_rps"+".txt"
+        with open(filename,"w") as convert_file:
+            convert_file.write(json.dumps(results_data))
+    elif mode == 'rps_req_size':
+        print("MAX RPS varying the request size")
+        for i in range(10, 10000, 100):
+            print(f"REQUEST SIZE: {i} | 3 nodes")
             res = detectMaxRps(i, 3)
             results_data.append([i, 3, int(res)])
-        # Varia o número de nós e verifica
-        for i in range(3, 8):
+    elif mode == "rps_num_nodes":
+        for i in range(2, 659):
+            print(f"NUM_NODES: {i} | 200 req size")
             res = detectMaxRps(200, i)
             results_data.append([200, i, int(res)])
     elif mode == 'custom':
