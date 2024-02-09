@@ -85,7 +85,7 @@ def perNodeBenchmark(requestsPerSecond, requestSize, numNodes, numNodesReadonly=
     print(allAddrs)
     selfAddr = ip_address_assign()
     if selfAddr:
-        addrs = allAddrs.pop(selfAddr)
+        addrs = allAddrs.remove(selfAddr)
     p = Popen(cmd + [selfAddr] + addrs, stdin=PIPE)
     p.communicate()
     errRates.append(float(p.returncode) / 100.0)
