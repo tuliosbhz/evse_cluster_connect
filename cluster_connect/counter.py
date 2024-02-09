@@ -45,7 +45,7 @@ if __name__ == '__main__':
     allAddrs = read_ip_port_file("nodes_addrs.txt")
     print(f"All addresses: {allAddrs}")
     selfAddr = ip_address_assign()
-    #selfAddr = f"{selfAddr}:{port}"
+    selfAddr = f"{selfAddr}:{port}"
     selfAddr = selfAddr.strip()
     print(f"Self Address: {selfAddr}")
     if selfAddr:
