@@ -11,7 +11,8 @@ from find_my_addr import ip_address_assign
 class TestObj(SyncObj):
     
     def __init__(self, selfNodeAddr, otherNodeAddrs):
-        cfg = SyncObjConf(dynamicMembershipChange = True)
+        cfg = SyncObjConf(dynamicMembershipChange = True,
+                          bindAddress=selfNodeAddr)
         super(TestObj, self).__init__(selfNodeAddr, otherNodeAddrs, conf=cfg)
         self.__counter = 0
 
@@ -64,6 +65,7 @@ if __name__ == '__main__':
             print(old_value)
         if o._getLeader() is None:
             print(o.selfNode.address)
+            print(o.getStatus())
             continue
         # if n < 2000:
         if n < 20:
