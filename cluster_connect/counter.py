@@ -5,13 +5,14 @@ import sys
 import time
 from functools import partial
 sys.path.append("../")
-from pysyncobj import SyncObj, replicated
+from pysyncobj import SyncObj, replicated, SyncObjConf
 from find_my_addr import ip_address_assign
 
 class TestObj(SyncObj):
-
+    
     def __init__(self, selfNodeAddr, otherNodeAddrs):
-        super(TestObj, self).__init__(selfNodeAddr, otherNodeAddrs)
+        cfg = SyncObjConf(dynamicMembershipChange = True)
+        super(TestObj, self).__init__(selfNodeAddr, otherNodeAddrs, conf=cfg)
         self.__counter = 0
 
     @replicated
