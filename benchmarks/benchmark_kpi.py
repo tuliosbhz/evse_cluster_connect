@@ -74,14 +74,15 @@ def read_ip_port_file(file_path):
             ip_port_list.append(str(ip_port))
     return ip_port_list
 
-def perNodeBenchmark(requestsPerSecond, requestSize, numNodes, numNodesReadonly=0, delay=False):
-    # Pedidos por segundo por cada nó, valor útil para comparar com execução em um único nó
-    #rpsPerNode = requestsPerSecond / (numNodes + numNodesReadonly)
+def perNodeBenchmark(requestsPerSecond, requestSize, addrs_filename:str=None, numNodesReadonly=0, delay=False):
     cmd = [sys.executable, 'testobj_kpi.py' if delay else 'testobj.py', str(requestsPerSecond), str(requestSize)]
     allAddrs = []
     errRates = []
     #Lê-se endereços do ficheiro local
-    allAddrs = read_ip_port_file("nodes_addrs.txt")
+    if adddrs_filename:
+        allAddrs = read_ip_port_file(adddrs_filename)
+    else:
+        allAddrs = read_ip_port_file("nodes_addrs.txt")
     print(f"All addresses: {allAddrs}")
     selfAddr = ip_address_assign()
     selfAddr = f"{selfAddr}:{START_PORT}"
@@ -134,10 +135,11 @@ def printUsage():
     sys.exit(-1)
 
 if __name__ == '__main__':
-    if len(sys.argv) != 2:
+    if len(sys.argv) != 3:
         printUsage()
 
     mode = sys.argv[1]
+    addrs_filename = sys.argv[2]
     results_data = []
     #Teste de número de nós na rede de 2 até 659 que é o valor de carregadores existentes na cidade do porto
     if mode == 'kpi':
@@ -176,7 +178,15 @@ if __name__ == '__main__':
             res = detectMaxRps(200, i)
             results_data.append([200, i, int(res)])
     elif mode == "node_exp":
-        print(perNodeBenchmark(100,2100,3))
+        print(perNodeBenchmark(100,2100))
+    elif mode == "node_exp_full":
+        for i in range(10,2110,100):
+            for j in range(1,301,50):
+                results_data.append([i, j, perNodeBenchmark(j,i, addrs_filename=addrs_filename, delay=True)])
+                print(results_data)
+        filename = "results/" + "node_exp_full"+".txt"
+        with open(filename,"w") as convert_file:
+            convert_file.write(json.dumps(results_data))
     elif mode == 'custom':
         results_data.append([25000, 10, 3, singleBenchmark(25000, 10, 3)])
     else:

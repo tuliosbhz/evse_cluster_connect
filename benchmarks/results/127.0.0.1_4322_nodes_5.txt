@@ -1,1 +1,0 @@
-{"Request Size": 10, "Num Nodes": 5, "RPS": 7902, "Success Rate": 0.00020754239433054924, "Total Requests": 914, "Total Time": 84.95348691940308, "Throughput": 0.09294692223129439, "Time of experiment": 25.0, "Average Delay": 2.0720362663269043, "Num Commands Errors": 143343, "Network Threshold": 0, "Node Address": "localhost:4322"}
