@@ -65,6 +65,7 @@ if __name__ == '__main__':
             print(old_value)
         if o._getLeader() is None:
             print(o.selfNode.address)
+            print(o.selfNode.ip)
             print(o.getStatus())
             continue
         # if n < 2000:
