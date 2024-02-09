@@ -4,7 +4,6 @@ import pickle
 from functools import wraps
 from subprocess import Popen, PIPE
 import os
-import pandas as pd
 import json
 DEVNULL = open(os.devnull, 'wb')
 
@@ -96,31 +95,6 @@ def detectMaxRps(requestSize, numNodes):
         results.append(res)
     return sorted(results)[len(results) // 2]
 
-def init_results(filename):
-    # If the file doesn't exist, create a new DataFrame and save it to the file
-    data = [[0,0,0,0.0,0,0,0,""],]
-    df = pd.DataFrame(data, columns=['Request Size', 'Num Nodes', 'Max RPS', "Success Rate"])
-    df.to_csv(filename, index=False)
-    print(f"New DataFrame saved to {filename}")
-
-#Essa função não está atualizando
-def update_csv_inplace(csv_path, num_nodes_filter, update_column, update_value):
-    # Read CSV file into a DataFrame
-    df = pd.read_csv(csv_path)
-
-    # Filter rows based on 'Num Nodes' column
-    filtered_rows = df[df['Num Nodes'] == num_nodes_filter]
-
-    # Update the specified column in the filtered rows
-    filtered_rows[update_column] = update_value
-
-    # Update the original DataFrame with the changes
-    df.update(filtered_rows)
-
-    # Save the updated DataFrame to the same CSV file
-    df.to_csv(csv_path, index=False)
-    print(f"Updated DataFrame saved to {csv_path}")
-
 def printUsage():
     print('Usage: %s mode(rps/kpi/custom)' % sys.argv[0])
     sys.exit(-1)
@@ -131,7 +105,6 @@ if __name__ == '__main__':
 
     mode = sys.argv[1]
     results_data = []
-    #init_results("resultado_experimento.csv")
     #Teste de número de nós na rede de 2 até 659 que é o valor de carregadores existentes na cidade do porto
     if mode == 'kpi':
         # TODO: realizar testes consistentes com número dinâmico de Pedidos por segundo, Tamanho dos pedidos e Número de nós
