@@ -79,8 +79,8 @@ def perNodeBenchmark(requestsPerSecond, requestSize, addrs_filename:str=None, nu
     allAddrs = []
     errRates = []
     #Lê-se endereços do ficheiro local
-    if adddrs_filename:
-        allAddrs = read_ip_port_file(adddrs_filename)
+    if addrs_filename:
+        allAddrs = read_ip_port_file(addrs_filename)
     else:
         allAddrs = read_ip_port_file("nodes_addrs.txt")
     print(f"All addresses: {allAddrs}")

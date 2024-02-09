@@ -18,7 +18,7 @@ Endereços de integrantes do cluster:
 - Pedidos por segundo: [1, 300] #Valor baseado em artigo que realiza testes de desempenho na rede
 
 ### Descrição do experimento
-- Executar o ficheiro "benchmark_kpy.py node_exp_full" 
+- Executar o ficheiro "benchmark_kpy.py node_exp_full nds_addr_exp_one.txt" 
 - Resultados serão registados na pasta results/{endereço_do_no}.txt
 - Executar o comando:
 ~~~~
@@ -36,7 +36,7 @@ scp pi@192.168.219.4:/evse_cluster_connect/benchmarks/results/192.168.219.4_5700
 - Pedidos por segundo: [1, 300] #Valor baseado em artigo que realiza testes de desempenho na rede
 
 ### Descrição do experimento
-- Executar o ficheiro "benchmark_kpy.py node_exp_full" 
+- Executar o ficheiro "benchmark_kpy.py node_exp_full nds_addr_exp_two.txt" 
 - Resultados serão registados na pasta results/{endereço_do_no}.txt
 - Executar o comando:
 ~~~~
@@ -56,7 +56,7 @@ scp pi@192.168.219.8:/evse_cluster_connect/benchmarks/results/192.168.219.8_5500
 - Pedidos por segundo: [1, 300] #Valor baseado em artigo que realiza testes de desempenho na rede
 
 ### Descrição do experimento
-- Executar o ficheiro "benchmark_kpy.py node_exp_full" 
+- Executar o ficheiro "benchmark_kpy.py node_exp_full nds_addr_exp_three.txt" 
 - Resultados serão registados na pasta results/{endereço_do_no}.txt
 - Executar o comando:
 ~~~~
@@ -78,7 +78,7 @@ scp pi@192.168.219.141:/evse_cluster_connect/benchmarks/results/192.168.219.141_
 - Pedidos por segundo: [1, 300] #Valor baseado em artigo que realiza testes de desempenho na rede
 
 ### Descrição do experimento
-- Executar o ficheiro "benchmark_kpy.py node_exp_full" 
+- Executar o ficheiro "benchmark_kpy.py node_exp_full nds_addr_exp_four.txt" 
 - Resultados serão registados na pasta results/{endereço_do_no}.txt
 - Executar o comando:
 ~~~~
