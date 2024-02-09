@@ -85,6 +85,7 @@ def perNodeBenchmark(requestsPerSecond, requestSize, numNodes, numNodesReadonly=
     print(f"All addresses: {allAddrs}")
     selfAddr = ip_address_assign()
     selfAddr = str(selfAddr + ":" + str(START_PORT))
+    selfAddr = selfAddr.strip()
     print(f"Self Address: {selfAddr}")
     if selfAddr:
         allAddrs.remove(selfAddr)
