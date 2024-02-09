@@ -84,6 +84,7 @@ def perNodeBenchmark(requestsPerSecond, requestSize, numNodes, numNodesReadonly=
     allAddrs = read_ip_port_file("nodes_addrs.txt")
     print(allAddrs)
     selfAddr = ip_address_assign()
+    selfAddr = selfAddr + ":" + str(START_PORT)
     if selfAddr:
         addrs = allAddrs.remove(selfAddr)
     p = Popen(cmd + [selfAddr] + addrs, stdin=PIPE)
