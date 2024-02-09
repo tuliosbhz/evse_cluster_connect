@@ -71,7 +71,7 @@ def read_ip_port_file(file_path):
     with open(file_path, 'r') as file:
         for line in file:
             ip_port = line.strip()  # Remove leading/trailing whitespace and newline characters
-            ip_port_list.append(ip_port)
+            ip_port_list.append(str(ip_port))
     return ip_port_list
 
 def perNodeBenchmark(requestsPerSecond, requestSize, numNodes, numNodesReadonly=0, delay=False):
@@ -87,7 +87,8 @@ def perNodeBenchmark(requestsPerSecond, requestSize, numNodes, numNodesReadonly=
     selfAddr = str(selfAddr + ":" + str(START_PORT))
     print(f"Self Address: {selfAddr}")
     if selfAddr:
-        addrs = allAddrs.remove(selfAddr)
+        allAddrs.remove(selfAddr)
+        addrs = allAddrs
     p = Popen(cmd + [selfAddr] + addrs, stdin=PIPE)
     p.communicate()
     errRates.append(float(p.returncode) / 100.0)
