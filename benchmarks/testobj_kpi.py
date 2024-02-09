@@ -6,14 +6,12 @@ from collections import defaultdict
 sys.path.append("../")
 from pysyncobj import SyncObj, replicated, SyncObjConf, FAIL_REASON
 import numpy as np
-import pandas as pd
-import os
 import json
 from psutil import cpu_percent, virtual_memory
 
-class TestObj(SyncObj):
 
-    def __init__(self, selfNodeAddr, otherNodeAddrs):
+class TestObj(SyncObj):
+    def __init__(self, selfNodeAddr, otherNodeAddrs):        
         cfg = SyncObjConf(
             appendEntriesUseBatch=False,
         )

@@ -5,6 +5,7 @@ from functools import wraps
 from subprocess import Popen, PIPE
 import os
 import json
+from find_my_addr import ip_address_assign
 DEVNULL = open(os.devnull, 'wb')
 
 START_PORT = 4321
@@ -59,6 +60,35 @@ def singleBenchmark(requestsPerSecond, requestSize, numNodes, numNodesReadonly=0
         p.communicate()
         errRates.append(float(p.returncode) / 100.0)
     #Media de delay entre nós da rede, média de toda a rede
+    avgRate = sum(errRates) / len(errRates)
+    if delay:
+        return avgRate
+    #Somente retorna os casos com sucesso acima de 90%
+    return avgRate >= 0.9
+
+def read_ip_port_file(file_path):
+    ip_port_list = []
+    with open(file_path, 'r') as file:
+        for line in file:
+            ip_port = line.strip()  # Remove leading/trailing whitespace and newline characters
+            ip_port_list.append(ip_port)
+    return ip_port_list
+
+def perNodeBenchmark(requestsPerSecond, requestSize, numNodes, numNodesReadonly=0, delay=False):
+    # Pedidos por segundo por cada nó, valor útil para comparar com execução em um único nó
+    #rpsPerNode = requestsPerSecond / (numNodes + numNodesReadonly)
+    cmd = [sys.executable, 'testobj_kpi.py' if delay else 'testobj.py', str(requestsPerSecond), str(requestSize)]
+    allAddrs = []
+    errRates = []
+    #Lê-se endereços do ficheiro local
+    allAddrs = read_ip_port_file("nodes_addrs.txt")
+    print(allAddrs)
+    selfAddr = ip_address_assign()
+    if selfAddr:
+        addrs = allAddrs.pop(selfAddr)
+    p = Popen(cmd + [selfAddr] + addrs, stdin=PIPE)
+    p.communicate()
+    errRates.append(float(p.returncode) / 100.0)
     avgRate = sum(errRates) / len(errRates)
     if delay:
         return avgRate
@@ -141,6 +171,8 @@ if __name__ == '__main__':
             print(f"NUM_NODES: {i} | 200 req size")
             res = detectMaxRps(200, i)
             results_data.append([200, i, int(res)])
+    elif mode == "node_exp":
+        print(perNodeBenchmark(100,2100,3))
     elif mode == 'custom':
         results_data.append([25000, 10, 3, singleBenchmark(25000, 10, 3)])
     else:
