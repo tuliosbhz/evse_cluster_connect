@@ -8,7 +8,7 @@ from pysyncobj import SyncObj, replicated, SyncObjConf, FAIL_REASON
 import numpy as np
 import json
 from psutil import cpu_percent, virtual_memory
-
+import os
 
 class TestObj(SyncObj):
     def __init__(self, selfNodeAddr, otherNodeAddrs):        
@@ -146,6 +146,20 @@ if __name__ == '__main__':
     filename = "results/"+str(obj.selfNode.ip) + "_" + str(obj.selfNode.port) + "_nodes_" + str(num_nodes) +".txt"
     with open(filename,"w") as convert_file:
         convert_file.write(json.dumps(_results))
-    
+
+    filename = "results/" + str(obj.selfNode.ip) + "_" + str(obj.selfNode.port) + ".txt"
+
+    # Check if the file already exists
+    if os.path.exists(filename):
+        mode = "a"  # If the file exists, open it in append mode
+    else:
+        mode = "w"  # If the file doesn't exist, open it in write mode
+
+    with open(filename, mode) as convert_file:
+        # If the file already exists and is being opened in append mode,
+        # add a newline character before appending the new data
+        if mode == "a":
+            convert_file.write("\n")
+        convert_file.write(json.dumps(_results))
 
     sys.exit(round(avgDelay * 100))

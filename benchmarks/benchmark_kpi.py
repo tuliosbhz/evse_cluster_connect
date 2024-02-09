@@ -96,13 +96,13 @@ def perNodeBenchmark(requestsPerSecond, requestSize, addrs_filename:str=None, nu
         allAddrs = read_ip_port_file(addrs_filename)
     else:
         allAddrs = read_ip_port_file("nodes_addrs.txt")
-    print(f"All addresses: {allAddrs}")
+    #print(f"All addresses: {allAddrs}")
     selfAddr = ip_address_assign()
     for addr in allAddrs:
         ip,port = separate_ip_port(addr)
         if selfAddr == ip:
             selfAddr = f"{selfAddr}:{port}"
-    print(f"Self Address: {selfAddr}")
+    #print(f"Self Address: {selfAddr}")
     if selfAddr:
         allAddrs.remove(selfAddr)
         addrs = allAddrs
@@ -197,6 +197,7 @@ if __name__ == '__main__':
     elif mode == "node_exp_full":
         for i in range(10,2110,100):
             for j in range(1,301,50):
+                print(f"Experimento: {addrs_filename} | Req Size: {i} | RPS: {j}")
                 results_data.append([i, j, perNodeBenchmark(j,i, addrs_filename=addrs_filename, delay=True)])
                 print(results_data)
         filename = "results/" + "node_exp_full"+".txt"
