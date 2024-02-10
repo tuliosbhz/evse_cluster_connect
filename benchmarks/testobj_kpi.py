@@ -5,7 +5,6 @@ import random
 from collections import defaultdict
 sys.path.append("../")
 from pysyncobj import SyncObj, replicated, SyncObjConf, FAIL_REASON
-import numpy as np
 import json
 from psutil import cpu_percent, virtual_memory
 import os
@@ -114,8 +113,8 @@ if __name__ == '__main__':
     #print(f"G_SENT: {_g_sent} vs GET_NUM_COMMANDS_APPLIED {obj.getNumCommandsApplied()} ")
     #print('SUCCESS RATE:', successRate)
     if _g_delays:
-        _g_delays_sort = sorted(_g_delays)
-        delays = np.array(_g_delays_sort)
+        #_g_delays_sort = sorted(_g_delays)
+        #delays = np.array(_g_delays_sort)
         #avgDelay = float(delays.mean())
         #Problema quando não 
         avgDelay = _g_delays[round(len(_g_delays) / 2)-1]
