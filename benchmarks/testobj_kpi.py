@@ -86,7 +86,7 @@ if __name__ == '__main__':
     startTime = time.time()
     #Compara tempo atual com tempo de inicio do teste (Somente faz o teste por 25 segundos)
     #Como os comandos são realizados de forma periódica no intervalo de 1 segundo 
-    tot_time_experiment = 5.0
+    tot_time_experiment = 25.0
     while time.time() - startTime < tot_time_experiment:
         #Regista tempo antes de iniciar uma transação
         st = time.time()
@@ -140,8 +140,8 @@ if __name__ == '__main__':
                 "Time of experiment": tot_time_experiment,
                 "Average Delay": avgDelay,
                 "Num Commands Errors": _g_error,
-                "CPU usage": sum(_cpu_usage) / len(_cpu_usage),
-                "Mem usage": sum(_mem_usage) / len(_mem_usage),
+                "CPU usage": round(sum(_cpu_usage) / len(_cpu_usage),2),
+                "Mem usage": round(sum(_mem_usage) / len(_mem_usage),2),
                 "Node Address": str(obj.selfNode.address)}
     filename = "results/"+str(obj.selfNode.ip) + "_" + str(obj.selfNode.port) + "_nodes_" + str(num_nodes) +".txt"
     with open(filename,"w") as convert_file:

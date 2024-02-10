@@ -22,9 +22,9 @@ Endereços de integrantes do cluster:
 - Resultados serão registados na pasta results/{endereço_do_no}.txt
 - Executar o comando:
 ~~~~
-scp pi@192.168.219.6:/evse_cluster_connect/benchmarks/results/192.168.219.6_56000_nodes_2.txt C:\Users\tulio.soares\Documents\GitHub\evse_cluster_connect\benchmarks\results
+scp pi@192.168.219.6:/home/pi/evse_cluster_connect/benchmarks/results/192.168.219.6_56000.txt C:\Users\tulio.soares\Documents\GitHub\evse_cluster_connect\benchmarks\results
 
-scp pi@192.168.219.4:/evse_cluster_connect/benchmarks/results/192.168.219.4_57000_nodes_2.txt C:\Users\tulio.soares\Documents\GitHub\evse_cluster_connect\benchmarks\results
+scp pi@192.168.219.4:/home/pi/evse_cluster_connect/benchmarks/results/192.168.219.4_57000.txt C:\Users\tulio.soares\Documents\GitHub\evse_cluster_connect\benchmarks\results
 ~~~~
 - [Opcional] No repositório local no PC executar o ficheiro create_csv_from_results.py
 
@@ -40,11 +40,12 @@ scp pi@192.168.219.4:/evse_cluster_connect/benchmarks/results/192.168.219.4_5700
 - Resultados serão registados na pasta results/{endereço_do_no}.txt
 - Executar o comando:
 ~~~~
-scp pi@192.168.219.6:/evse_cluster_connect/benchmarks/results/192.168.219.6_56000_nodes_3.txt C:\Users\tulio.soares\Documents\GitHub\evse_cluster_connect\benchmarks\results
+scp pi@192.168.219.6:/home/pi/evse_cluster_connect/benchmarks/results/192.168.219.6_56000.txt C:\Users\tulio.soares\Documents\GitHub\evse_cluster_connect\benchmarks\results
 
-scp pi@192.168.219.4:/evse_cluster_connect/benchmarks/results/192.168.219.4_57000_nodes_3.txt C:\Users\tulio.soares\Documents\GitHub\evse_cluster_connect\benchmarks\results
+scp pi@192.168.219.4:/home/pi/evse_cluster_connect/benchmarks/results/192.168.219.4_57000.txt C:\Users\tulio.soares\Documents\GitHub\evse_cluster_connect\benchmarks\results
 
-scp pi@192.168.219.8:/evse_cluster_connect/benchmarks/results/192.168.219.8_55000_nodes_3.txt C:\Users\tulio.soares\Documents\GitHub\evse_cluster_connect\benchmarks\results
+scp pi@192.168.219.8:/home/pi/evse_cluster_connect/benchmarks/results/192.168.219.8_55000.txt C:\Users\tulio.soares\Documents\GitHub\evse_cluster_connect\benchmarks\results
+
 ~~~~
 - [Opcional] No repositório local no PC executar o ficheiro create_csv_from_results.py
 
@@ -60,13 +61,13 @@ scp pi@192.168.219.8:/evse_cluster_connect/benchmarks/results/192.168.219.8_5500
 - Resultados serão registados na pasta results/{endereço_do_no}.txt
 - Executar o comando:
 ~~~~
-scp pi@192.168.219.6:/evse_cluster_connect/benchmarks/results/192.168.219.6_56000_nodes_4.txt C:\Users\tulio.soares\Documents\GitHub\evse_cluster_connect\benchmarks\results
+scp pi@192.168.219.6:/home/pi/evse_cluster_connect/benchmarks/results/192.168.219.6_56000.txt C:\Users\tulio.soares\Documents\GitHub\evse_cluster_connect\benchmarks\results
 
-scp pi@192.168.219.4:/evse_cluster_connect/benchmarks/results/192.168.219.4_57000_nodes_4.txt C:\Users\tulio.soares\Documents\GitHub\evse_cluster_connect\benchmarks\results
+scp pi@192.168.219.4:/home/pi/evse_cluster_connect/benchmarks/results/192.168.219.4_57000.txt C:\Users\tulio.soares\Documents\GitHub\evse_cluster_connect\benchmarks\results
 
-scp pi@192.168.219.8:/evse_cluster_connect/benchmarks/results/192.168.219.8_55000_nodes_4.txt C:\Users\tulio.soares\Documents\GitHub\evse_cluster_connect\benchmarks\results
+scp pi@192.168.219.8:/home/pi/evse_cluster_connect/benchmarks/results/192.168.219.8_55000.txt C:\Users\tulio.soares\Documents\GitHub\evse_cluster_connect\benchmarks\results
 
-scp pi@192.168.219.141:/evse_cluster_connect/benchmarks/results/192.168.219.141_58000_nodes_4.txt C:\Users\tulio.soares\Documents\GitHub\evse_cluster_connect\benchmarks\results
+scp pi@192.168.219.141:/home/pi/evse_cluster_connect/benchmarks/results/192.168.219.141_58000.txt C:\Users\tulio.soares\Documents\GitHub\evse_cluster_connect\benchmarks\results
 ~~~~
 - [Opcional] No repositório local no PC executar o ficheiro create_csv_from_results.py
 
@@ -82,15 +83,15 @@ scp pi@192.168.219.141:/evse_cluster_connect/benchmarks/results/192.168.219.141_
 - Resultados serão registados na pasta results/{endereço_do_no}.txt
 - Executar o comando:
 ~~~~
-scp pi@192.168.219.6:/evse_cluster_connect/benchmarks/results/192.168.219.6_56000_nodes_5.txt C:\Users\tulio.soares\Documents\GitHub\evse_cluster_connect\benchmarks\results
+scp pi@192.168.219.6:/home/pi/evse_cluster_connect/benchmarks/results/192.168.219.6_56000.txt C:\Users\tulio.soares\Documents\GitHub\evse_cluster_connect\benchmarks\results
 
-scp pi@192.168.219.4:/evse_cluster_connect/benchmarks/results/192.168.219.4_57000_nodes_5.txt C:\Users\tulio.soares\Documents\GitHub\evse_cluster_connect\benchmarks\results
+scp pi@192.168.219.4:/home/pi/evse_cluster_connect/benchmarks/results/192.168.219.4_57000.txt C:\Users\tulio.soares\Documents\GitHub\evse_cluster_connect\benchmarks\results
 
-scp pi@192.168.219.8:/evse_cluster_connect/benchmarks/results/192.168.219.8_55000_nodes_5.txt C:\Users\tulio.soares\Documents\GitHub\evse_cluster_connect\benchmarks\results
+scp pi@192.168.219.8:/home/pi/evse_cluster_connect/benchmarks/results/192.168.219.8_55000.txt C:\Users\tulio.soares\Documents\GitHub\evse_cluster_connect\benchmarks\results
 
-scp pi@192.168.219.141:/evse_cluster_connect/benchmarks/results/192.168.219.141_58000_nodes_5.txt C:\Users\tulio.soares\Documents\GitHub\evse_cluster_connect\benchmarks\results
+scp pi@192.168.219.141:/home/pi/evse_cluster_connect/benchmarks/results/192.168.219.141_58000.txt C:\Users\tulio.soares\Documents\GitHub\evse_cluster_connect\benchmarks\results
 
-scp pi@192.168.219.140:/evse_cluster_connect/benchmarks/results/192.168.219.140_59000_nodes_5.txt C:\Users\tulio.soares\Documents\GitHub\evse_cluster_connect\benchmarks\results
+scp pi@192.168.219.140:/home/pi/evse_cluster_connect/benchmarks/results/192.168.219.140_59000.txt C:\Users\tulio.soares\Documents\GitHub\evse_cluster_connect\benchmarks\results
 ~~~~
 - [Opcional] No repositório local no PC executar o ficheiro create_csv_from_results.py
 
