@@ -85,7 +85,7 @@ if __name__ == '__main__':
     startTime = time.time()
     #Compara tempo atual com tempo de inicio do teste (Somente faz o teste por 25 segundos)
     #Como os comandos são realizados de forma periódica no intervalo de 1 segundo 
-    tot_time_experiment = 25.0
+    tot_time_experiment = 50.0
     while time.time() - startTime < tot_time_experiment:
         #Regista tempo antes de iniciar uma transação
         st = time.time()

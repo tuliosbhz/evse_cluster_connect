@@ -195,7 +195,7 @@ if __name__ == '__main__':
     elif mode == "node_exp":
         print(perNodeBenchmark(100,2100))
     elif mode == "node_exp_full":
-        for i in range(10,2110,100):
+        for i in range(2110,9,-200):
             for j in range(1,310,50):
                 print(f"Experimento: {addrs_filename} | Req Size: {i} | RPS: {j}")
                 results_data.append([i, j, perNodeBenchmark(j,i, addrs_filename=addrs_filename, delay=True)])
