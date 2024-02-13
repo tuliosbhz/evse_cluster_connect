@@ -35,9 +35,11 @@ _g_error = 0
 _g_errors = defaultdict(int)
 _g_delays = []
 _results = {}
-_tot_time = 0
+_tot_time = 0 #Accumulated delay of successful calls
 _cpu_usage = []
 _mem_usage = []
+_terms = []
+_up_times = []
 #Função de callback que cria uma lista com os valores dos delays em cada transação
 """
 Considera no caso de sucesso (FAIL_REASON.SUCCESS) 
@@ -97,6 +99,11 @@ if __name__ == '__main__':
         #Tempo de cada transação acumulado
         _cpu_usage.append(cpu_percent())
         _mem_usage.append(virtual_memory().percent)
+
+        #Raft parameters
+        raft_status = obj.getStatus()
+        _terms.append(raft_status["raft_term"])
+        _up_times.append(raft_status["uptime"])
         #Calcula tempo de transação
         delta = time.time() - st
         #Verifica que transação durou menos de 1 segundo
@@ -135,12 +142,14 @@ if __name__ == '__main__':
                 "Success Rate": successRate,
                 "Total Requests": num_trans_rede,
                 "Total Time": _tot_time,
-                "Throughput": _tot_time / num_trans_rede,
+                "Throughput": _tot_time / _g_success,
                 "Time of experiment": tot_time_experiment,
                 "Average Delay": avgDelay,
                 "Num Commands Errors": _g_error,
                 "CPU usage": round(sum(_cpu_usage) / len(_cpu_usage),2),
                 "Mem usage": round(sum(_mem_usage) / len(_mem_usage),2),
+                "Raft up time": round(sum(_up_times) / len(_up_times),2),
+                "Raft terms": _terms[-1] - _terms[0], #Count of total terms
                 "Node Address": str(obj.selfNode.address)}
     filename = "results/"+str(obj.selfNode.ip) + "_" + str(obj.selfNode.port) + "_nodes_" + str(num_nodes) +".txt"
     with open(filename,"w") as convert_file:
