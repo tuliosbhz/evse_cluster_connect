@@ -16,15 +16,20 @@ class TestObj(SyncObj):
         )
         super(TestObj, self).__init__(selfNodeAddr, otherNodeAddrs, cfg)
         self.__appliedCommands = 0
+        self.__mensagem = ""
         self.__results = {}
 
     @replicated
     def testMethod(self, val, callTime):
+        self.__mensagem = val
         self.__appliedCommands += 1
         return (callTime, time.time())
 
     def getNumCommandsApplied(self):
         return self.__appliedCommands
+    
+    def getMensagem(self):
+        return self.__mensagem
     
     def set_results(self, results):
         self.__results = results
@@ -113,7 +118,6 @@ if __name__ == '__main__':
     #Tempo para esperar a propagação de comandos enviados na rede de consenso
     #Se tiver 10 nós na rede aguarda 10 segundos para se obter as respostas
     time.sleep(float(num_nodes))
-    #Results 
     
     num_trans_rede = obj.getNumCommandsApplied()
     successRate = float(_g_success) / float(_g_sent)
@@ -140,9 +144,10 @@ if __name__ == '__main__':
                 "Num Nodes": num_nodes,
                 "RPS": numCommands,
                 "Success Rate": successRate,
-                "Total Requests": num_trans_rede,
+                "Total Requests in glob": _g_sent,
+                "Total Requests in obj": num_trans_rede,
                 "Total Time": _tot_time,
-                "Throughput": _tot_time / _g_success,
+                "Throughput": _g_success / _tot_time,
                 "Time of experiment": tot_time_experiment,
                 "Average Delay": avgDelay,
                 "Num Commands Errors": _g_error,
@@ -150,11 +155,14 @@ if __name__ == '__main__':
                 "Mem usage": round(sum(_mem_usage) / len(_mem_usage),2),
                 "Raft up time": round(sum(_up_times) / len(_up_times),2),
                 "Raft terms": _terms[-1] - _terms[0], #Count of total terms
-                "Node Address": str(obj.selfNode.address)}
-    filename = "results/"+str(obj.selfNode.ip) + "_" + str(obj.selfNode.port) + "_nodes_" + str(num_nodes) +".txt"
-    with open(filename,"w") as convert_file:
-        convert_file.write(json.dumps(_results))
-
+                "Node Address": str(obj.selfNode.address),
+                "ERROR_CNT_QUEUE_FULL    ": _g_errors[FAIL_REASON.QUEUE_FULL],     #: Commands queue full
+                "ERROR_CNT_MISSING_LEADER": _g_errors[FAIL_REASON.MISSING_LEADER],      #: Leader is currently missing (leader election in progress, or no connection)
+                "ERROR_CNT_DISCARDED     ": _g_errors[FAIL_REASON.DISCARDED],      #: Command discarded (cause of new leader elected and another command was applied instead)
+                "ERROR_CNT_NOT_LEADER    ": _g_errors[FAIL_REASON.NOT_LEADER],       #: Leader has changed, old leader did not have time to commit command.
+                "ERROR_CNT_LEADER_CHANGED": _g_errors[FAIL_REASON.LEADER_CHANGED],      #: Simmilar to NOT_LEADER - leader has changed without command commit.
+                "ERROR_CNT_REQUEST_DENIED": _g_errors[FAIL_REASON.REQUEST_DENIED]       #: Command denied}
+                }
     filename = "results/" + str(obj.selfNode.ip) + "_" + str(obj.selfNode.port) + ".txt"
 
     # Check if the file already exists

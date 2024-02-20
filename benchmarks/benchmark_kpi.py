@@ -31,10 +31,9 @@ def memoize(fileName):
     return doMemoize
 
 # Calcula a taxa de sucesso para diferentes valores de débito (pedidos por segundo)
-def singleBenchmark(requestsPerSecond, requestSize, numNodes, numNodesReadonly=0, delay=False):
+def localBenchmark(requestsPerSecond, requestSize, numNodes, numNodesReadonly=0, delay=False):
     # Pedidos por segundo por cada nó, valor útil para comparar com execução em um único nó
-    rpsPerNode = requestsPerSecond / (numNodes + numNodesReadonly)
-    cmd = [sys.executable, 'testobj_kpi.py' if delay else 'testobj.py', str(rpsPerNode), str(requestSize)]
+    cmd = [sys.executable, 'testobj_kpi.py' if delay else 'testobj.py', str(requestsPerSecond), str(requestSize)]
     processes = []
     allAddrs = []
 
@@ -127,7 +126,7 @@ def doDetectMaxRps(requestSize, numNodes):
     while b - a > MIN_RPS: #Intervalo igual a MIN_RPS considera-se que encontrou o máxímo RPS
         #Centro do intervalo entre a e b
         c = a + (b - a) / 2
-        res = singleBenchmark(c, requestSize, numNodes)
+        res = localBenchmark(c, requestSize, numNodes)
         if res:
             #Se recebeu algum retorno aumenta o mínimo antigo centro do intervalo (b-a)
             a = c
@@ -146,7 +145,7 @@ def detectMaxRps(requestSize, numNodes):
     return sorted(results)[len(results) // 2]
 
 def printUsage():
-    print('Usage: %s mode(rps/kpi/custom)' % sys.argv[0])
+    print('Usage: %s mode(local/rps/custom)' % sys.argv[0])
     sys.exit(-1)
 
 if __name__ == '__main__':
@@ -157,15 +156,15 @@ if __name__ == '__main__':
     addrs_filename = sys.argv[2]
     results_data = []
     #Teste de número de nós na rede de 2 até 659 que é o valor de carregadores existentes na cidade do porto
-    if mode == 'kpi':
+    if mode == 'local':
         # TODO: realizar testes consistentes com número dinâmico de Pedidos por segundo, Tamanho dos pedidos e Número de nós
         # TODO: realizar testes consistentes com número dinâmico de Pedidos por segundo, Tamanho dos pedidos e Número de nós
-        request_size = 10
-        for num_nodes in range(2,11):
-            print(f"NUM NODES: {num_nodes}")
-            #requests_per_second = num_nodes * 2
-            for rps in range(MIN_RPS, MAX_RPS,500):
-                res = singleBenchmark(rps, request_size, num_nodes, delay=True)
+        for num_nodes in range(2,7):
+            print(f"NUM NODES: {num_nodes} \n\n")
+            for i in range(2110,9,-200):
+                for j in range(1,310,50):
+                    print(f"Experimento: {addrs_filename} | Req Size: {i} | RPS: {j}\n")
+                    res = localBenchmark(j, i, num_nodes, delay=True)
     elif mode == 'rps':
         print("MAX RPS varying the request size")
         for i in range(10, 5000, 100):
@@ -204,7 +203,7 @@ if __name__ == '__main__':
         with open(filename,"w") as convert_file:
             convert_file.write(json.dumps(results_data))
     elif mode == 'custom':
-        results_data.append([25000, 10, 3, singleBenchmark(25000, 10, 3)])
+        results_data.append([25000, 10, 3, localBenchmark(25000, 10, 3)])
     else:
         printUsage()
 
