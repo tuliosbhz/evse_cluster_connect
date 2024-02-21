@@ -123,11 +123,13 @@ if __name__ == '__main__':
     elif mode == "single_node_exp":
         print(perNodeBenchmark(100,2100))
     elif mode == "all_nodes_exp":
-        for i in range(2110,9,-200):
-            for j in range(1,310,50):
-                print(f"Experimento: {addrs_filename} | Req Size: {i} | RPS: {j}")
-                results_data.append([i, j, perNodeBenchmark(j,i, addrs_filename=addrs_filename, delay=True)])
-                print(results_data)
+        input_files=["nds_addr_exp_two_nodes.txt", "nds_addr_exp_three_nodes.txt", "nds_addr_exp_four_nodes.txt", "nds_addr_exp_five_nodes.txt", "nds_addr_exp_six_nodes.txt"]
+        for file in input_files:
+            for i in range(2110,9,-200):
+                for j in range(1,310,50):
+                    print(f"Experimento: {file} | Req Size: {i} | RPS: {j}")
+                    results_data.append([i, j, perNodeBenchmark(j,i, addrs_filename=file, delay=True)])
+                    print(results_data)
         filename = "results/" + "node_exp_full"+".txt"
         with open(filename,"w") as convert_file:
             convert_file.write(json.dumps(results_data))
