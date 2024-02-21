@@ -70,11 +70,8 @@ def separate_ip_port(ip_port_str):
     else:
         # If the format is incorrect, return None for both IP and Port
         return None, None
-
-def perNodeBenchmark(requestsPerSecond, requestSize, addrs_filename:str=None, numNodesReadonly=0, delay=False):
-    cmd = [sys.executable, 'testobj_kpi.py' if delay else 'testobj.py', str(requestsPerSecond), str(requestSize)]
-    allAddrs = []
-    errRates = []
+    
+def configure_addrs_from_file(addrs_filename:str):
     #Lê-se endereços do ficheiro local
     if addrs_filename:
         allAddrs = read_ip_port_file(addrs_filename)
@@ -87,6 +84,12 @@ def perNodeBenchmark(requestsPerSecond, requestSize, addrs_filename:str=None, nu
         if selfAddr == ip:
             selfAddr = f"{selfAddr}:{port}"
         #This node is not included in this experiment
+    return selfAddr, allAddrs
+
+def perNodeBenchmark(requestsPerSecond, requestSize, selfAddr, allAddrs, numNodesReadonly=0, delay=False):
+    cmd = [sys.executable, 'testobj_kpi.py' if delay else 'testobj.py', str(requestsPerSecond), str(requestSize)]
+    allAddrs = []
+    errRates = []
     if selfAddr in allAddrs:
         allAddrs.remove(selfAddr)
         addrs = allAddrs
@@ -124,16 +127,18 @@ if __name__ == '__main__':
     elif mode == "all_nodes_exp":
         input_files=["nds_addr_exp_two_nodes.txt", "nds_addr_exp_three_nodes.txt", "nds_addr_exp_four_nodes.txt", "nds_addr_exp_five_nodes.txt", "nds_addr_exp_six_nodes.txt"]
         for file in input_files:
-            for i in range(2110,9,-200):
-                for j in range(1,310,50):
-                    print(f"Experimento: {file} | Req Size: {i} | RPS: {j}")
-                    result = perNodeBenchmark(j,i, addrs_filename=file, delay=True)
-                    if result >= 0:
-                        results_data.append([i, j, result])
-                        print(results_data)
-                    else:
-                        print("Node not included in current experiment")
-                        time.sleep(50.0)
+            selfAddr, allAddrs = configure_addrs_from_file(file)
+            if selfAddr in allAddrs:
+                for i in range(2110,9,-200):
+                    for j in range(1,310,50):
+                        print(f"Experimento: {file} | Req Size: {i} | RPS: {j}")
+                        result = perNodeBenchmark(j,i, selfAddr, allAddrs, delay=True)
+                        if result >= 0:
+                            results_data.append([i, j, result])
+                            print(results_data)
+            else:
+                print("Node not included in current experiment")
+                time.sleep(25.0)
                     
         filename = "results/" + "node_exp_full"+".txt"
         with open(filename,"w") as convert_file:
