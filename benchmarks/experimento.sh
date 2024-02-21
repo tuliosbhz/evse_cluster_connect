@@ -7,10 +7,16 @@ input_files=("nds_addr_exp_two_nodes.txt" "nds_addr_exp_three_nodes.txt" "nds_ad
 for file in "${input_files[@]}"; do
     echo "Executing experiment with input file: $file"
     
-    # Execute the Python script with the current input file
-    python3 benchmark_kpi.py all_nodes_exp "$file"
+    # Execute the Python script with the current input file in the background
+    python3 benchmark_kpi.py all_nodes_exp "$file" &
     
-    # Add a pause or sleep between experiments
+    # Capture the process ID of the background process
+    pid=$!
+    
+    # Wait for the background process to finish
+    wait $pid
+    
+    # Add a pause or sleep between experiments if needed
     sleep 5
 done
 
