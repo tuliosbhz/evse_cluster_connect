@@ -6,6 +6,7 @@ from subprocess import Popen, PIPE
 import os
 import json
 from find_my_addr import ip_address_assign
+import time
 DEVNULL = open(os.devnull, 'wb')
 
 START_PORT = 4321
@@ -86,9 +87,7 @@ def perNodeBenchmark(requestsPerSecond, requestSize, addrs_filename:str=None, nu
         if selfAddr == ip:
             selfAddr = f"{selfAddr}:{port}"
         #This node is not included in this experiment
-        else:
-            selfAddr = None 
-    if selfAddr:
+    if selfAddr in allAddrs:
         allAddrs.remove(selfAddr)
         addrs = allAddrs
         p = Popen(cmd + [selfAddr] + addrs, stdin=PIPE)
@@ -100,7 +99,7 @@ def perNodeBenchmark(requestsPerSecond, requestSize, addrs_filename:str=None, nu
         #Somente retorna os casos com sucesso acima de 90%
         return avgRate >= 0.9
     else:
-        return 0.0
+        return -1
 
 def printUsage():
     print('Usage: %s mode(local/rps/custom)' % sys.argv[0])
@@ -128,8 +127,14 @@ if __name__ == '__main__':
             for i in range(2110,9,-200):
                 for j in range(1,310,50):
                     print(f"Experimento: {file} | Req Size: {i} | RPS: {j}")
-                    results_data.append([i, j, perNodeBenchmark(j,i, addrs_filename=file, delay=True)])
-                    print(results_data)
+                    result = perNodeBenchmark(j,i, addrs_filename=file, delay=True)
+                    if result >= 0:
+                        results_data.append([i, j, result])
+                        print(results_data)
+                    else:
+                        print("Node not included in current experiment")
+                        time.sleep(50.0)
+                    
         filename = "results/" + "node_exp_full"+".txt"
         with open(filename,"w") as convert_file:
             convert_file.write(json.dumps(results_data))
