@@ -113,39 +113,6 @@ def perNodeBenchmark(requestsPerSecond, requestSize, addrs_filename:str=None, nu
         return avgRate
     #Somente retorna os casos com sucesso acima de 90%
     return avgRate >= 0.9
-<<<<<<< HEAD
-=======
-"""
-Obtem o valor do Máximo RPS testando diferentes valores de RPS
-Os parametros de configuração da rede:
-- Tamanho dos pedidos 
-- Número de nós
-"""
-def doDetectMaxRps(requestSize, numNodes):
-    a = MIN_RPS
-    b = MAX_RPS
-    numIt = 0
-    while b - a > MIN_RPS: #Intervalo igual a MIN_RPS considera-se que encontrou o máxímo RPS
-        #Centro do intervalo entre a e b
-        c = a + (b - a) / 2
-        res = localBenchmark(c, requestSize, numNodes)
-        if res:
-            #Se recebeu algum retorno aumenta o mínimo antigo centro do intervalo (b-a)
-            a = c
-        else:
-            #Se não recebeu retorno diminui máximo para o centro do intervalo (b-a)
-            b = c
-        numIt += 1
-    return a
-
-@memoize('maxRpsCache.bin')
-def detectMaxRps(requestSize, numNodes):
-    results = []
-    for i in range(0, 5):
-        res = doDetectMaxRps(requestSize, numNodes)
-        results.append(res)
-    return sorted(results)[len(results) // 2]
->>>>>>> parent of ec12c65 (new bash file to execute automatically the experiments)
 
 def printUsage():
     print('Usage: %s mode(local/rps/custom)' % sys.argv[0])
@@ -161,39 +128,12 @@ if __name__ == '__main__':
     #Teste de número de nós na rede de 2 até 659 que é o valor de carregadores existentes na cidade do porto
     if mode == 'local':
         # TODO: realizar testes consistentes com número dinâmico de Pedidos por segundo, Tamanho dos pedidos e Número de nós
-        # TODO: realizar testes consistentes com número dinâmico de Pedidos por segundo, Tamanho dos pedidos e Número de nós
         for num_nodes in range(2,7):
             print(f"NUM NODES: {num_nodes} \n\n")
             for i in range(2110,9,-200):
                 for j in range(1,310,50):
                     print(f"Experimento: {addrs_filename} | Req Size: {i} | RPS: {j}\n")
                     res = localBenchmark(j, i, num_nodes, delay=True)
-    elif mode == 'rps':
-        print("MAX RPS varying the request size")
-        for i in range(10, 5000, 100):
-            print("MAX RPS varying the number of nodes")
-            for j in range(2, 24):
-                print(f"NUM_NODES: {j} | {i} req size")
-                res = detectMaxRps(i, j)
-                results_data.append([i, j, int(res)])
-        print(f"Results req size: {results_data}")
-        #Varia o número de nós e verifica o valor da 
-        #taxa de pedidos por segundo com taxa de sucesso de 90%
-        print(f"Results total: {results_data}")
-        filename = "results/" + "max_rps"+".txt"
-        with open(filename,"w") as convert_file:
-            convert_file.write(json.dumps(results_data))
-    elif mode == 'rps_req_size':
-        print("MAX RPS varying the request size")
-        for i in range(10, 10000, 100):
-            print(f"REQUEST SIZE: {i} | 3 nodes")
-            res = detectMaxRps(i, 3)
-            results_data.append([i, 3, int(res)])
-    elif mode == "rps_num_nodes":
-        for i in range(2, 659):
-            print(f"NUM_NODES: {i} | 200 req size")
-            res = detectMaxRps(200, i)
-            results_data.append([200, i, int(res)])
     elif mode == "node_exp":
         print(perNodeBenchmark(100,2100))
     elif mode == "node_exp_full":
