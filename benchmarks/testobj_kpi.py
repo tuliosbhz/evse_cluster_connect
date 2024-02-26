@@ -10,16 +10,22 @@ from psutil import cpu_percent, virtual_memory
 import os
 
 class TestObj(SyncObj):
-    def __init__(self, selfNodeAddr, otherNodeAddrs):
+    def __init__(self, selfNodeAddr, otherNodeAddrs, commandsSize):
         """
         param "commandsWaitLedaer" pode ser retirado e depois inserido para assim determinar os parametros quando espera o sistema sincronizar e quando não)
-        """        
+        """  
+        ############### Calculate the optimal TCP buffer size for sockets transactions ##################
+        square_root = commandsSize ** (1/2)
+        upper_square_root = int(square_root) + (square_root % 1 > 0)
+        opt_tcp_buff_size = 2 ** upper_square_root        
         cfg = SyncObjConf(
             appendEntriesUseBatch=False,
-            commandsWaitLeader=True, #Only will keep sending commands if leader has synced all the values 
+            commandsWaitLeader=True, #Only will keep sending commands if leader has synced all the values
             dynamicMembershipChange=True, #To allow changes on the nodes
-            fullDumpFile="experiment_dump_file.txt"
-        )
+            fullDumpFile="experiment_dump_file.txt",
+            sendBufferSize= opt_tcp_buff_size,
+            recvBufferSize= opt_tcp_buff_size
+            )
         super(TestObj, self).__init__(selfNodeAddr, otherNodeAddrs, cfg)
         self.__appliedCommands = 0
         self.__mensagem = ""
@@ -45,8 +51,6 @@ _g_success = 0
 _g_error = 0
 _g_errors = defaultdict(int)
 _g_delays = []
-_g_succ_delays = []
-_g_err_delays = []
 _results = {}
 _tot_time = 0 #Accumulated delay of successful calls
 _cpu_usage = []
@@ -61,18 +65,15 @@ def clbck(res, err):
     #Tempo de cada transação acumulado
     _cpu_usage.append(cpu_percent())
     _mem_usage.append(virtual_memory().percent)
-    #Porque não utiliza recvTime: Verificar diferença
-    callTime, recvTime = res
-    delay = time.time() - callTime
-    _g_delays.append(delay)
-    _tot_time += delay
     if err == FAIL_REASON.SUCCESS:
         _g_success += 1
-        _g_succ_delays.append(delay)
+        callTime, recvTime = res
+        delay = time.time() - callTime
+        _g_delays.append(delay)
+        _tot_time += delay
     else:
         _g_error += 1
         _g_errors[err] += 1
-        _g_err_delays.append(delay)
 
 def getRandStr(l):
     f = '%0' + str(l) + 'x'
@@ -94,12 +95,15 @@ if __name__ == '__main__':
     ############### Configuration #############################
     maxCommandsQueueSize = int(0.9 * SyncObjConf().commandsQueueSize / len(partners))
     #Instancia objeto de teste
-    obj = TestObj(selfAddr, partners)
+    obj = TestObj(selfAddr, partners, cmdSize)
     ############## Wait for leader ###########################
+    startTimeInitialization = time.time()
     while obj._getLeader() is None:
         time.sleep(0.5)
-
+    
     time.sleep(4.0)
+
+    initializationDelay = startTimeInitialization - time.time()
 
     startTime = time.time()
     #Compara tempo atual com tempo de inicio do teste (Somente faz o teste por 25 segundos)
@@ -132,16 +136,6 @@ if __name__ == '__main__':
         avgDelay = _g_delays[round(len(_g_delays) / 2)-1]
     else:
         avgDelay=0
-    
-    if _g_succ_delays:
-        avgSuccDelay = _g_succ_delays[round(len(_g_succ_delays) / 2)-1]
-    else:
-        avgSuccDelay=0
-
-    if _g_err_delays:
-        avgErrDelay = _g_err_delays[round(len(_g_err_delays) / 2)-1]
-    else:
-        avgErrDelay=0
 
     if successRate < 0.9:
         print('LOST RATE:', 1.0 - float(_g_success + _g_error) / float(_g_sent))
@@ -153,27 +147,24 @@ if __name__ == '__main__':
     _results = {"Request Size": cmdSize,
                 "RPS": numCommands,
                 "Num Nodes": num_nodes,
-                "Successful Requests": _g_success,
                 "Total Time": _tot_time,
                 "Throughput": _g_success / _tot_time,
-                "Average Delay": avgDelay,
-                "Average Succ Delay": avgSuccDelay,
-                "Average Err Delay": avgErrDelay,
+                "Average Succ Delay": avgDelay,
                 "Success Rate": successRate,
                 "CPU usage": round(sum(_cpu_usage) / len(_cpu_usage),2),
                 "Mem usage": round(sum(_mem_usage) / len(_mem_usage),2),
-                "Raft up time": raft_status["uptime"],
+                "Raft up time": raft_status["uptime"] - initializationDelay,
                 "Raft terms": raft_status["raft_term"], #Count of total terms,
-                "Num Commands Errors": _g_error,
+                "Total Err Requets": _g_error,
+                "Total Requests global": _g_sent,
+                "Total Requests in object": num_trans_rede,
+                "Total Succ Requests": _g_success,
                 "ERROR_CNT_QUEUE_FULL    ": _g_errors[FAIL_REASON.QUEUE_FULL],     #: Commands queue full
                 "ERROR_CNT_MISSING_LEADER": _g_errors[FAIL_REASON.MISSING_LEADER],      #: Leader is currently missing (leader election in progress, or no connection)
                 "ERROR_CNT_DISCARDED     ": _g_errors[FAIL_REASON.DISCARDED],      #: Command discarded (cause of new leader elected and another command was applied instead)
                 "ERROR_CNT_NOT_LEADER    ": _g_errors[FAIL_REASON.NOT_LEADER],       #: Leader has changed, old leader did not have time to commit command.
                 "ERROR_CNT_LEADER_CHANGED": _g_errors[FAIL_REASON.LEADER_CHANGED],      #: Simmilar to NOT_LEADER - leader has changed without command commit.
                 "ERROR_CNT_REQUEST_DENIED": _g_errors[FAIL_REASON.REQUEST_DENIED],      #: Command denied}
-                "Total Requests global": _g_sent,
-                "Total Requests in object": num_trans_rede,
-                "Total Succ Requests": _g_success,
                 "Time of experiment": tot_time_experiment,
                 "Node Address": str(obj.selfNode.address)
                 }
