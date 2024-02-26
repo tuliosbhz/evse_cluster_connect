@@ -9,19 +9,23 @@ import json
 from psutil import cpu_percent, virtual_memory
 import os
 
+def find_upper_power_of_two(n):
+    power_of_two = 1
+    while power_of_two < n:
+        power_of_two *= 2
+    return power_of_two
+
 class TestObj(SyncObj):
     def __init__(self, selfNodeAddr, otherNodeAddrs, commandsSize):
         """
         param "commandsWaitLedaer" pode ser retirado e depois inserido para assim determinar os parametros quando espera o sistema sincronizar e quando não)
         """  
         ############### Calculate the optimal TCP buffer size for sockets transactions ##################
-        square_root = commandsSize ** (1/2)
-        upper_square_root = int(square_root) + (square_root % 1 > 0)
-        opt_tcp_buff_size = 2 ** upper_square_root        
+        opt_tcp_buff_size = find_upper_power_of_two(commandsSize)
         cfg = SyncObjConf(
             appendEntriesUseBatch=False,
             commandsWaitLeader=True, #Only will keep sending commands if leader has synced all the values
-            dynamicMembershipChange=True, #To allow changes on the nodes
+            dynamicMembershipChange=False, #To allow changes on the nodes
             sendBufferSize= opt_tcp_buff_size,
             recvBufferSize= opt_tcp_buff_size
             )
@@ -93,22 +97,20 @@ if __name__ == '__main__':
     num_nodes = len(partners) + 1
     ############### Configuration #############################
     maxCommandsQueueSize = int(0.9 * SyncObjConf().commandsQueueSize / len(partners))
+    #Compara tempo atual com tempo de inicio do teste (Somente faz o teste por 50 segundos)
+    tot_time_experiment = 50.0
     #Instancia objeto de teste
     obj = TestObj(selfAddr, partners, cmdSize)
     ############## Wait for leader ###########################
     startTimeInitialization = time.time()
+
     while obj._getLeader() is None:
+        print("Waiting for leader to start experiment \n")
         time.sleep(0.5)
-    
+
     time.sleep(4.0)
-
     initializationDelay = startTimeInitialization - time.time()
-
     startTime = time.time()
-    #Compara tempo atual com tempo de inicio do teste (Somente faz o teste por 25 segundos)
-    #Como os comandos são realizados de forma periódica no intervalo de 1 segundo 
-    tot_time_experiment = 50.0
-    #Raft parameters - Initial values
     while time.time() - startTime < tot_time_experiment:
         #Regista tempo antes de iniciar uma transação
         st = time.time()
