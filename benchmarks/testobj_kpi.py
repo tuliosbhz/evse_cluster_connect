@@ -26,8 +26,8 @@ class TestObj(SyncObj):
             appendEntriesUseBatch=False,
             commandsWaitLeader=False, #Only will keep sending commands if leader has synced all the values
             dynamicMembershipChange=False, #To allow changes on the nodes
-            sendBufferSize= opt_tcp_buff_size * 2,
-            recvBufferSize= opt_tcp_buff_size * 2 
+            sendBufferSize= 2 ** 20,
+            recvBufferSize= 2 ** 20
             )
         super(TestObj, self).__init__(selfNodeAddr, otherNodeAddrs, cfg)
         self.__appliedCommands = 0
