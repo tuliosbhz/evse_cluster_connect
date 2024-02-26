@@ -22,7 +22,6 @@ class TestObj(SyncObj):
             appendEntriesUseBatch=False,
             commandsWaitLeader=True, #Only will keep sending commands if leader has synced all the values
             dynamicMembershipChange=True, #To allow changes on the nodes
-            fullDumpFile="experiment_dump_file.txt",
             sendBufferSize= opt_tcp_buff_size,
             recvBufferSize= opt_tcp_buff_size
             )
