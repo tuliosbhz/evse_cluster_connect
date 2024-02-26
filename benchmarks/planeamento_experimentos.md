@@ -99,6 +99,7 @@ scp pi@192.168.219.8:/home/pi/evse_cluster_connect/benchmarks/results/192.168.21
 scp pi@192.168.219.141:/home/pi/evse_cluster_connect/benchmarks/results/192.168.219.141_58000.txt C:\Users\tulio.soares\Documents\GitHub\evse_cluster_connect\benchmarks\results
 
 scp pi@192.168.219.140:/home/pi/evse_cluster_connect/benchmarks/results/192.168.219.140_59000.txt C:\Users\tulio.soares\Documents\GitHub\evse_cluster_connect\benchmarks\results
+
 ~~~~
 - [Opcional] No repositório local no PC executar o ficheiro create_csv_from_results.py
 

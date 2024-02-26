@@ -24,10 +24,10 @@ class TestObj(SyncObj):
         opt_tcp_buff_size = find_upper_power_of_two(commandsSize)
         cfg = SyncObjConf(
             appendEntriesUseBatch=False,
-            commandsWaitLeader=True, #Only will keep sending commands if leader has synced all the values
+            commandsWaitLeader=False, #Only will keep sending commands if leader has synced all the values
             dynamicMembershipChange=False, #To allow changes on the nodes
-            sendBufferSize= opt_tcp_buff_size,
-            recvBufferSize= opt_tcp_buff_size
+            sendBufferSize= opt_tcp_buff_size * 2,
+            recvBufferSize= opt_tcp_buff_size * 2 
             )
         super(TestObj, self).__init__(selfNodeAddr, otherNodeAddrs, cfg)
         self.__appliedCommands = 0
