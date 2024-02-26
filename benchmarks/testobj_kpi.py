@@ -8,12 +8,22 @@ from pysyncobj import SyncObj, replicated, SyncObjConf, FAIL_REASON
 import json
 from psutil import cpu_percent, virtual_memory
 import os
+from find_my_addr import ip_address_assign, read_ip_port_file, separate_ip_port
 
+def change_membership_clbk(res):
+    if res:
+        print("Nó adicionado para próximo experimento")
+        return True
+    else:
+        return False
 class TestObj(SyncObj):
     def __init__(self, selfNodeAddr, otherNodeAddrs):        
         cfg = SyncObjConf(
             appendEntriesUseBatch=False,
-        )
+            commandsWaitLeader=True, #Only will keep sending commands if leader has synced all the values
+            dynamicMembershipChange=True, #To allow changes on the nodes
+            fullDumpFile="experiment_dump_file.txt"
+            )
         super(TestObj, self).__init__(selfNodeAddr, otherNodeAddrs, cfg)
         self.__appliedCommands = 0
         self.__mensagem = ""
@@ -24,6 +34,19 @@ class TestObj(SyncObj):
         self.__mensagem = val
         self.__appliedCommands += 1
         return (callTime, time.time())
+    
+    @replicated
+    def configureExperiment(self, nodesOnExperiment):
+        if self.selfNode.address in nodesOnExperiment:
+            for node in nodesOnExperiment:
+                if node not in self.otherNodes:
+                    self.addNodeToCluster(node,callback=change_membership_clbk)
+                    while not self.isNodeConnected(node):
+                        time.sleep(0.5)
+            return True
+        else:
+            return False
+        
 
     def getNumCommandsApplied(self):
         return self.__appliedCommands
@@ -50,17 +73,22 @@ _up_times = []
 Considera no caso de sucesso (FAIL_REASON.SUCCESS) 
 """
 def clbck(res, err):
-    global _g_error, _g_success, _g_delays, _tot_time
+    global _g_error, _g_success, _g_delays, _tot_time, _cpu_usage, _mem_usage
+    #Tempo de cada transação acumulado
+    _cpu_usage.append(cpu_percent())
+    _mem_usage.append(virtual_memory().percent)
+    #Porque não utiliza recvTime: Verificar diferença
+    callTime, recvTime = res
+    delay = time.time() - callTime
+    _tot_time += delay
     if err == FAIL_REASON.SUCCESS:
         _g_success += 1
-        callTime, recvTime = res
-        #Porque não utiliza recvTime: Verificar diferença
-        delay = time.time() - callTime
         _g_delays.append(delay)
-        _tot_time += delay
     else:
         _g_error += 1
         _g_errors[err] += 1
+
+    
 
 def getRandStr(l):
     f = '%0' + str(l) + 'x'
@@ -69,20 +97,35 @@ def getRandStr(l):
 
 if __name__ == '__main__':
     if len(sys.argv) < 5:
-        print('Usage: %s RPS requestSize selfHost:port partner1Host:port partner2Host:port ...' % sys.argv[0])
+        print('Usage: %s RPS requestSize numNodes nodeOneHost:port nodeTwoHost:port nodeThreeHost:port ...' % sys.argv[0])
         sys.exit(-1)
     ############### Input of parameters ######################
     numCommands = round(float(sys.argv[1]))
     cmdSize = int(sys.argv[2])
-    selfAddr = sys.argv[3]
-    if selfAddr == 'readonly':
-        selfAddr = None
-    partners = sys.argv[4:]
-    num_nodes = len(partners) + 1
+    num_nodes = int(sys.argv[3])
+    allAddrs = sys.argv[4:]
+
+    ############### Configura o experimento ######################
+    selfAddr = ip_address_assign()
+    nodesOnExperiment = allAddrs[:num_nodes]
+    for addr in nodesOnExperiment:
+        ip,port = separate_ip_port(addr)
+        if selfAddr == ip:
+            selfAddr = f"{selfAddr}:{port}"
+
+    partners = nodesOnExperiment
+    if selfAddr in partners:
+        partners = partners.remove(selfAddr)
+    else:
+        sys.exit(0)
+
     ############### Configuration #############################
     maxCommandsQueueSize = int(0.9 * SyncObjConf().commandsQueueSize / len(partners))
     #Instancia objeto de teste
     obj = TestObj(selfAddr, partners)
+    #Os nós dos experimentos finais vão chegar a esse ponto e somente executar quando for sua vez
+    while obj.configureExperiment(nodesOnExperiment) is False:
+        time.sleep(0.5)
     ############## Wait for leader ###########################
     while obj._getLeader() is None:
         time.sleep(0.5)
@@ -101,10 +144,6 @@ if __name__ == '__main__':
             #Envia uma transação nova
             obj.testMethod(getRandStr(cmdSize), time.time(), callback=clbck)
             _g_sent += 1
-        #Tempo de cada transação acumulado
-        _cpu_usage.append(cpu_percent())
-        _mem_usage.append(virtual_memory().percent)
-
         #Raft parameters
         raft_status = obj.getStatus()
         _terms.append(raft_status["raft_term"])
@@ -116,22 +155,14 @@ if __name__ == '__main__':
         #Sempre espera 1 segundo, pois considera o atraso de retorno da transação
         time.sleep(1.0 - delta)
     #Tempo para esperar a propagação de comandos enviados na rede de consenso
-    #Se tiver 10 nós na rede aguarda 10 segundos para se obter as respostas
-    time.sleep(float(num_nodes))
+    time.sleep(5.0)
     
     num_trans_rede = obj.getNumCommandsApplied()
     successRate = float(_g_success) / float(_g_sent)
-    #print(f"G_SENT: {_g_sent} vs GET_NUM_COMMANDS_APPLIED {obj.getNumCommandsApplied()} ")
-    #print('SUCCESS RATE:', successRate)
     if _g_delays:
-        #_g_delays_sort = sorted(_g_delays)
-        #delays = np.array(_g_delays_sort)
-        #avgDelay = float(delays.mean())
-        #Problema quando não 
         avgDelay = _g_delays[round(len(_g_delays) / 2)-1]
     else:
         avgDelay=0
-    #print('AVG DELAY:', avgDelay)
 
     if successRate < 0.9:
         print('LOST RATE:', 1.0 - float(_g_success + _g_error) / float(_g_sent))
@@ -150,6 +181,7 @@ if __name__ == '__main__':
                 "Throughput": _g_success / _tot_time,
                 "Time of experiment": tot_time_experiment,
                 "Average Delay": avgDelay,
+                "Num Commands Successful": _g_success,
                 "Num Commands Errors": _g_error,
                 "CPU usage": round(sum(_cpu_usage) / len(_cpu_usage),2),
                 "Mem usage": round(sum(_mem_usage) / len(_mem_usage),2),
