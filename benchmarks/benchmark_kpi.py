@@ -108,7 +108,8 @@ def perNodeBenchmark(requestsPerSecond, requestSize, addrs_filename:str=None, nu
     p = Popen(cmd + [selfAddr] + addrs, stdin=PIPE)
     p.communicate()
     errRates.append(float(p.returncode) / 100.0)
-    avgRate = sum(errRates) / len(errRates)
+    print(errRates)
+    avgRate = errRates[-1]
     if delay:
         return avgRate
     #Somente retorna os casos com sucesso acima de 90%
