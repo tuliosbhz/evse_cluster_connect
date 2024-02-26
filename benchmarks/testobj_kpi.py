@@ -17,12 +17,18 @@ def change_membership_clbk(res):
     else:
         return False
 class TestObj(SyncObj):
-    def __init__(self, selfNodeAddr, otherNodeAddrs):        
+    def __init__(self, selfNodeAddr, otherNodeAddrs, commandsSize):
+        ############### Calculate the optimal TCP buffer size for sockets transactions ##################
+        square_root = commandsSize ** (1/2)
+        upper_square_root = int(square_root) + (square_root % 1 > 0)
+        opt_tcp_buff_size = 2 ** upper_square_root        
         cfg = SyncObjConf(
             appendEntriesUseBatch=False,
             commandsWaitLeader=True, #Only will keep sending commands if leader has synced all the values
             dynamicMembershipChange=True, #To allow changes on the nodes
-            fullDumpFile="experiment_dump_file.txt"
+            fullDumpFile="experiment_dump_file.txt",
+            sendBufferSize= opt_tcp_buff_size,
+            recvBufferSize= opt_tcp_buff_size
             )
         super(TestObj, self).__init__(selfNodeAddr, otherNodeAddrs, cfg)
         self.__appliedCommands = 0
@@ -122,7 +128,7 @@ if __name__ == '__main__':
     ############### Configuration #############################
     maxCommandsQueueSize = int(0.9 * SyncObjConf().commandsQueueSize / len(partners))
     #Instancia objeto de teste
-    obj = TestObj(selfAddr, partners)
+    obj = TestObj(selfAddr, partners, cmdSize)
     #Os nós dos experimentos finais vão chegar a esse ponto e somente executar quando for sua vez
     while obj.configureExperiment(nodesOnExperiment) is False:
         time.sleep(0.5)
