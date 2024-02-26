@@ -173,6 +173,7 @@ if __name__ == '__main__':
                 "ERROR_CNT_REQUEST_DENIED": _g_errors[FAIL_REASON.REQUEST_DENIED],      #: Command denied}
                 "Total Requests global": _g_sent,
                 "Total Requests in object": num_trans_rede,
+                "Total Succ Requests": _g_success,
                 "Time of experiment": tot_time_experiment,
                 "Node Address": str(obj.selfNode.address)
                 }
