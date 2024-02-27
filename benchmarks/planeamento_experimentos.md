@@ -10,12 +10,17 @@ Endereços de integrantes do cluster:
 | 192.168.219.141 | inescevse006 | :58000 | 21% | Linux 6.1.21-v7+ armv7l |
 | 192.168.219.140 | inescevse001 | :59000 | 46% | Linux 5.15.76-v7+ armv7l |
 | 192.168.219.7 | inescevse007 | :60000 | 37% | Linux 6.1.21-v7+ armv7l |
+| 192.168.219.155 | inescevse011 | :61000 | 21% | Linux 6.1.21-v7+ armv7l |
 
 
 ## TODO
 
 Pedir ao chat gpt um programa em python para calcular o uso da CPU e da memória dos principais serviços relacionados ao carregador: 
 pidstat -u 600 >/var/log/pidstats.log & disown $!
+
+## Restart experiments
+rm -r results/*.txt
+git pull
 
 ## Experimento 01
 

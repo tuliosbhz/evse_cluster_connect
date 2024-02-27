@@ -14,20 +14,47 @@ def find_upper_power_of_two(n):
     while power_of_two < n:
         power_of_two *= 2
     return power_of_two
+""" 
+    self.raftMinTimeout = kwargs.get('raftMinTimeout', 0.4)
 
+    #: Same as raftMinTimeout
+    self.raftMaxTimeout = kwargs.get('raftMaxTimeout', 1.4)
+
+    #: Interval of sending append_entries (ping) command.
+    #: Should be less than raftMinTimeout.
+    self.appendEntriesPeriod = kwargs.get('appendEntriesPeriod', 0.1)
+
+    #: When no data received for connectionTimeout - connection considered dead.
+    #: Should be more than raftMaxTimeout.
+    self.connectionTimeout = kwargs.get('connectionTimeout', 3.5)
+
+    #: Interval between connection attempts.
+    #: Will try to connect to offline nodes each connectionRetryTime.
+    self.connectionRetryTime = kwargs.get('connectionRetryTime', 5.0)
+
+    #: When leader has no response from the majority of the cluster
+    #: for leaderFallbackTimeout - it will fallback to follower state.
+    #: Should be more than appendEntriesPeriod.
+    self.leaderFallbackTimeout = kwargs.get('leaderFallbackTimeout', 30.0)
+"""
 class TestObj(SyncObj):
-    def __init__(self, selfNodeAddr, otherNodeAddrs, commandsSize):
+    def __init__(self, selfNodeAddr, otherNodeAddrs, tcpBufferSize):
         """
         param "commandsWaitLedaer" pode ser retirado e depois inserido para assim determinar os parametros quando espera o sistema sincronizar e quando não)
         """  
         ############### Calculate the optimal TCP buffer size for sockets transactions ##################
-        opt_tcp_buff_size = find_upper_power_of_two(commandsSize)
         cfg = SyncObjConf(
             appendEntriesUseBatch=False,
-            commandsWaitLeader=False, #Only will keep sending commands if leader has synced all the values
-            dynamicMembershipChange=False, #To allow changes on the nodes
-            sendBufferSize= 2 ** 20,
-            recvBufferSize= 2 ** 20
+            commandsWaitLeader=True, #Commands will be queued to be futher processed by the leader
+            dynamicMembershipChange=False, #To allow changes on the nodes,
+            raftMinTimeout=0.4,
+            raftMaxTimeout=1.4,
+            appendEntriesPeriod=0.1,
+            connectionTimeout=3.5,
+            connectionRetryTime=5.0,
+            leaderFallbackTimeout=30.0,
+            sendBufferSize= tcpBufferSize,
+            recvBufferSize= tcpBufferSize
             )
         super(TestObj, self).__init__(selfNodeAddr, otherNodeAddrs, cfg)
         self.__appliedCommands = 0
@@ -99,8 +126,9 @@ if __name__ == '__main__':
     maxCommandsQueueSize = int(0.9 * SyncObjConf().commandsQueueSize / len(partners))
     #Compara tempo atual com tempo de inicio do teste (Somente faz o teste por 50 segundos)
     tot_time_experiment = 50.0
+    opt_tcp_buffer_size = find_upper_power_of_two(numCommands * cmdSize)
     #Instancia objeto de teste
-    obj = TestObj(selfAddr, partners, cmdSize)
+    obj = TestObj(selfAddr, partners, opt_tcp_buffer_size)
     ############## Wait for leader ###########################
     startTimeInitialization = time.time()
 
@@ -183,5 +211,7 @@ if __name__ == '__main__':
         if mode == "a":
             convert_file.write("\n")
         convert_file.write(json.dumps(_results))
+    #Add this to not interfer with next experiment
+    obj.destroy()
 
     sys.exit(round(avgDelay * 100))
