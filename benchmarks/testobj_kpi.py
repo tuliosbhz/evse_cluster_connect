@@ -184,7 +184,7 @@ if __name__ == '__main__':
                 "Success Rate": successRate,
                 "CPU usage": round(sum(_cpu_usage) / len(_cpu_usage),2),
                 "Mem usage": round(sum(_mem_usage) / len(_mem_usage),2),
-                "Raft up time": raft_status["uptime"] - initializationDelay - ,
+                "Raft up time": raft_status["uptime"] - initializationDelay,
                 "Raft terms": raft_status["raft_term"], #Count of total terms,
                 "Total Err Requets": _g_error,
                 "Total Requests global": _g_sent,
