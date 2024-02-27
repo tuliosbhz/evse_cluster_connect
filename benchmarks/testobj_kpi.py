@@ -38,9 +38,9 @@ def find_upper_power_of_two(n):
     self.leaderFallbackTimeout = kwargs.get('leaderFallbackTimeout', 30.0)
 """
 class TestObj(SyncObj):
-    def __init__(self, selfNodeAddr, otherNodeAddrs, tcpBufferSize):
+    def __init__(self, selfNodeAddr, otherNodeAddrs, tcpBufferSize, dumpFile):
         """
-        param "commandsWaitLedaer" pode ser retirado e depois inserido para assim determinar os parametros quando espera o sistema sincronizar e quando não)
+        param "commandsWaitLeader" pode ser retirado e depois inserido para assim determinar os parametros quando espera o sistema sincronizar e quando não)
         """  
         ############### Calculate the optimal TCP buffer size for sockets transactions ##################
         cfg = SyncObjConf(
@@ -48,13 +48,14 @@ class TestObj(SyncObj):
             commandsWaitLeader=True, #Commands will be queued to be futher processed by the leader
             dynamicMembershipChange=False, #To allow changes on the nodes,
             raftMinTimeout=0.4,
-            raftMaxTimeout=1.4,
-            appendEntriesPeriod=0.1,
+            raftMaxTimeout=1,
+            appendEntriesPeriod=0.001, #Permite que 1000 AppendTries sejam realizados por segundo
             connectionTimeout=3.5,
             connectionRetryTime=5.0,
             leaderFallbackTimeout=30.0,
             sendBufferSize= tcpBufferSize,
-            recvBufferSize= tcpBufferSize
+            recvBufferSize= tcpBufferSize,
+            fullDumpFile=dumpFile
             )
         super(TestObj, self).__init__(selfNodeAddr, otherNodeAddrs, cfg)
         self.__appliedCommands = 0
@@ -128,7 +129,7 @@ if __name__ == '__main__':
     tot_time_experiment = 50.0
     opt_tcp_buffer_size = find_upper_power_of_two(numCommands * cmdSize)
     #Instancia objeto de teste
-    obj = TestObj(selfAddr, partners, opt_tcp_buffer_size)
+    obj = TestObj(selfAddr, partners, opt_tcp_buffer_size,"experiment.txt")
     ############## Wait for leader ###########################
     startTimeInitialization = time.time()
 
@@ -155,7 +156,8 @@ if __name__ == '__main__':
         time.sleep(1.0 - delta)
     #Tempo para esperar a propagação de comandos enviados na rede de consenso
     #Se tiver 10 nós na rede aguarda 10 segundos para se obter as respostas
-    time.sleep(float(num_nodes))
+    wait_estabilize_network_time = num_nodes*10
+    time.sleep(float(wait_estabilize_network_time))
 
     #Raft parameters - Final values
     raft_status = obj.getStatus()
@@ -182,7 +184,7 @@ if __name__ == '__main__':
                 "Success Rate": successRate,
                 "CPU usage": round(sum(_cpu_usage) / len(_cpu_usage),2),
                 "Mem usage": round(sum(_mem_usage) / len(_mem_usage),2),
-                "Raft up time": raft_status["uptime"] - initializationDelay,
+                "Raft up time": raft_status["uptime"] - initializationDelay - ,
                 "Raft terms": raft_status["raft_term"], #Count of total terms,
                 "Total Err Requets": _g_error,
                 "Total Requests global": _g_sent,
