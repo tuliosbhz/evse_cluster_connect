@@ -49,7 +49,7 @@ class TestObj(SyncObj):
             dynamicMembershipChange=False, #To allow changes on the nodes,
             raftMinTimeout=0.4,
             raftMaxTimeout=1,
-            appendEntriesPeriod=0.001, #Permite que 1000 AppendTries sejam realizados por segundo
+            appendEntriesPeriod=0.01, #Permite que 1000 AppendTries sejam realizados por segundo
             connectionTimeout=3.5,
             connectionRetryTime=5.0,
             leaderFallbackTimeout=30.0,
