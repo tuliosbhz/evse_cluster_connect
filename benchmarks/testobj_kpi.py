@@ -55,7 +55,7 @@ class TestObj(SyncObj):
             leaderFallbackTimeout=30.0,
             sendBufferSize= tcpBufferSize,
             recvBufferSize= tcpBufferSize,
-            journalFile=raftLogFile
+            journalFile=None
             )
         super(TestObj, self).__init__(selfNodeAddr, otherNodeAddrs, cfg)
         self.__appliedCommands = 0
