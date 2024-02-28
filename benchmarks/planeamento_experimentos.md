@@ -134,6 +134,20 @@ scp pi@192.168.219.7:/home/pi/evse_cluster_connect/benchmarks/results/192.168.21
 ~~~~
 - [Opcional] No repositório local no PC executar o ficheiro create_csv_from_results.py
 
+## Experimento local vcpes26
+
+### Configuração da rede: 
+- Número de nós: 2-6
+- Tamanho dos pedidos: [10, 2100]
+- Pedidos por segundo: [1, 300] #Valor baseado em artigo que realiza testes de desempenho na rede
+
+### Descrição do experimento
+- Executar o ficheiro "benchmark_kpy.py local local.txt" 
+- Resultados serão registados na pasta results/{endereço_do_no}.txt
+- Executar o comando:
+~~~~
+scp -P 3000 tulio@194.117.27.193:"/home/tulio/evse_cluster_connect/benchmarks/results/*.txt" "C:\Users\tulio.soares\Documents\GitHub\evse_cluster_connect\benchmarks\results"
+~~~~
 
 SD card memory used at experiment time: 
 

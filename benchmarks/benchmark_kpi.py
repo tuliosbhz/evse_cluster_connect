@@ -129,7 +129,8 @@ if __name__ == '__main__':
     #Teste de número de nós na rede de 2 até 659 que é o valor de carregadores existentes na cidade do porto
     if mode == 'local':
         # TODO: realizar testes consistentes com número dinâmico de Pedidos por segundo, Tamanho dos pedidos e Número de nós
-        for num_nodes in range(2,7):
+        #for num_nodes in range(2,7):
+            num_nodes = 3
             print(f"NUM NODES: {num_nodes} \n\n")
             for i in range(2110,9,-200):
                 for j in range(1,310,50):
