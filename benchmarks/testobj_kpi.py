@@ -38,7 +38,7 @@ def find_upper_power_of_two(n):
     self.leaderFallbackTimeout = kwargs.get('leaderFallbackTimeout', 30.0)
 """
 class TestObj(SyncObj):
-    def __init__(self, selfNodeAddr, otherNodeAddrs, tcpBufferSize, dumpFile):
+    def __init__(self, selfNodeAddr, otherNodeAddrs, tcpBufferSize, raftLogFile):
         """
         param "commandsWaitLeader" pode ser retirado e depois inserido para assim determinar os parametros quando espera o sistema sincronizar e quando não)
         """  
@@ -55,7 +55,7 @@ class TestObj(SyncObj):
             leaderFallbackTimeout=30.0,
             sendBufferSize= tcpBufferSize,
             recvBufferSize= tcpBufferSize,
-            fullDumpFile=dumpFile
+            journalFile=raftLogFile
             )
         super(TestObj, self).__init__(selfNodeAddr, otherNodeAddrs, cfg)
         self.__appliedCommands = 0
@@ -123,18 +123,21 @@ if __name__ == '__main__':
         selfAddr = None
     partners = sys.argv[4:]
     num_nodes = len(partners) + 1
+    slack_time = []
     ############### Configuration #############################
     maxCommandsQueueSize = int(0.9 * SyncObjConf().commandsQueueSize / len(partners))
     #Compara tempo atual com tempo de inicio do teste (Somente faz o teste por 50 segundos)
     tot_time_experiment = 50.0
     opt_tcp_buffer_size = find_upper_power_of_two(numCommands * cmdSize)
     #Instancia objeto de teste
-    obj = TestObj(selfAddr, partners, opt_tcp_buffer_size,"experiment.txt")
+    raftLogFile = "raftLog" + "_" + str(num_nodes) + "nodes_" + str(numCommands) + "rps_" + str(cmdSize) + "size"
+    obj = TestObj(selfAddr, partners, opt_tcp_buffer_size, raftLogFile)
+    initial_raft_status = obj.getStatus()
+    initial_count_commands = obj.getNumCommandsApplied()
     ############## Wait for leader ###########################
     startTimeInitialization = time.time()
 
     while obj._getLeader() is None:
-        print("Waiting for leader to start experiment \n")
         time.sleep(0.5)
 
     time.sleep(4.0)
@@ -146,10 +149,11 @@ if __name__ == '__main__':
         #Executa uma serie de comandos o mais rápido possível e depois espera 1 segundo para executar Requets per second
         for i in range(0, numCommands):
             #Envia uma transação nova
-            obj.testMethod(getRandStr(cmdSize), time.time(), callback=clbck)
+            obj.testMethod(getRandStr(cmdSize), time.time(), callback=clbck)#, sync=True, timeout=1)
             _g_sent += 1
         #Calcula tempo de transação
         delta = time.time() - st
+        slack_time.append(delta)
         #Verifica que transação durou menos de 1 segundo
         assert delta <= 1.0
         #Sempre espera 1 segundo, pois considera o atraso de retorno da transação
@@ -160,11 +164,13 @@ if __name__ == '__main__':
     time.sleep(float(wait_estabilize_network_time))
 
     #Raft parameters - Final values
-    raft_status = obj.getStatus()
-    num_trans_rede = obj.getNumCommandsApplied()
+    final_raft_status = obj.getStatus()
+    final_count_commands = obj.getNumCommandsApplied()
+    tot_slack_time = sum(slack_time)
+    avg_slack_time =  tot_slack_time / len(slack_time)
     successRate = float(_g_success) / float(_g_sent)
     if _g_delays:
-        avgDelay = _g_delays[round(len(_g_delays) / 2)-1]
+        avgDelay = sum(_g_delays) / len(_g_delays)
     else:
         avgDelay=0
 
@@ -184,11 +190,14 @@ if __name__ == '__main__':
                 "Success Rate": successRate,
                 "CPU usage": round(sum(_cpu_usage) / len(_cpu_usage),2),
                 "Mem usage": round(sum(_mem_usage) / len(_mem_usage),2),
-                "Raft up time": raft_status["uptime"] - initializationDelay,
-                "Raft terms": raft_status["raft_term"], #Count of total terms,
-                "Total Err Requets": _g_error,
-                "Total Requests global": _g_sent,
-                "Total Requests in object": num_trans_rede,
+                "Raft up time": final_raft_status["uptime"] - initial_raft_status["uptime"],
+                "Raft terms": final_raft_status["raft_term"], #Count of total terms,
+                "Avg Slack Time": avg_slack_time,
+                "Tot Slack Time": tot_slack_time,
+                "Err Requets": _g_error,
+                "Sent Requests": _g_sent,
+                "Init Requests count in object": initial_count_commands,
+                "Fin Requests count in object": final_count_commands,
                 "Total Succ Requests": _g_success,
                 "ERROR_CNT_QUEUE_FULL    ": _g_errors[FAIL_REASON.QUEUE_FULL],     #: Commands queue full
                 "ERROR_CNT_MISSING_LEADER": _g_errors[FAIL_REASON.MISSING_LEADER],      #: Leader is currently missing (leader election in progress, or no connection)
