@@ -47,9 +47,9 @@ class TestObj(SyncObj):
             appendEntriesUseBatch=False,
             commandsWaitLeader=True, #Commands will be queued to be futher processed by the leader
             dynamicMembershipChange=False, #To allow changes on the nodes,
-            raftMinTimeout=0.4,
-            raftMaxTimeout=1,
-            appendEntriesPeriod=0.01, #Permite que 1000 AppendTries sejam realizados por segundo
+            raftMinTimeout=1,
+            raftMaxTimeout=2,
+            appendEntriesPeriod=0.01, #Permite que 100 AppendTries sejam realizados por segundo
             connectionTimeout=3.5,
             connectionRetryTime=5.0,
             leaderFallbackTimeout=30.0,
