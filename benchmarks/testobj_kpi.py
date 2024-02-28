@@ -131,6 +131,8 @@ if __name__ == '__main__':
     opt_tcp_buffer_size = find_upper_power_of_two(numCommands * cmdSize)
     #Instancia objeto de teste
     raftLogFile = "raftLog" + "_" + str(num_nodes) + "nodes_" + str(numCommands) + "rps_" + str(cmdSize) + "size"
+    raftLogFD = open(raftLogFile, "x")
+    raftLogFD.close()
     obj = TestObj(selfAddr, partners, opt_tcp_buffer_size, raftLogFile)
     initial_raft_status = obj.getStatus()
     initial_count_commands = obj.getNumCommandsApplied()
