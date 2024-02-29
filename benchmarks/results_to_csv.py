@@ -7,6 +7,7 @@ import time
 # Function to extract data from file name
 def extract_data_from_filename(filename):
     match = re.match(r'(\d+\.\d+\.\d+\.\d+)_(\d+)\.txt', filename)
+    #match = re.match(r'(\d+)_(\d+)\.txt', filename)
     if match:
         ip = match.group(1)
         port = int(match.group(2))

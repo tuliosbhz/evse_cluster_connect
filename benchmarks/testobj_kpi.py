@@ -47,9 +47,9 @@ class TestObj(SyncObj):
             appendEntriesUseBatch=False,
             commandsWaitLeader=True, #Commands will be queued to be futher processed by the leader
             dynamicMembershipChange=False, #To allow changes on the nodes,
-            raftMinTimeout=1,
-            raftMaxTimeout=2,
-            appendEntriesPeriod=0.01, #Permite que 100 AppendTries sejam realizados por segundo
+            raftMinTimeout=0.03,
+            raftMaxTimeout=0.5,
+            appendEntriesPeriod=0.005, #Permite que 100 AppendTries sejam realizados por segundo (5 milisegundos para cada envio)
             connectionTimeout=3.5,
             connectionRetryTime=5.0,
             leaderFallbackTimeout=30.0,
@@ -163,7 +163,8 @@ if __name__ == '__main__':
     #Tempo para esperar a propagação de comandos enviados na rede de consenso
     #Se tiver 10 nós na rede aguarda 10 segundos para se obter as respostas
     wait_estabilize_network_time = num_nodes*10
-    time.sleep(float(wait_estabilize_network_time))
+    while not obj._isReady():
+        time.sleep(0.5)
 
     #Raft parameters - Final values
     final_raft_status = obj.getStatus()
