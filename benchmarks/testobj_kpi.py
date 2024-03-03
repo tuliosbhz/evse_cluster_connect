@@ -128,7 +128,7 @@ if __name__ == '__main__':
     maxCommandsQueueSize = int(0.9 * SyncObjConf().commandsQueueSize / len(partners))
     #Compara tempo atual com tempo de inicio do teste (Somente faz o teste por 50 segundos)
     tot_time_experiment = 50.0
-    opt_tcp_buffer_size = find_upper_power_of_two(numCommands * cmdSize)
+    opt_tcp_buffer_size = find_upper_power_of_two(numCommands * 2 * cmdSize)
     #Instancia objeto de teste
     raftLogFile = "raftLog" + "_" + str(num_nodes) + "nodes_" + str(numCommands) + "rps_" + str(cmdSize) + "size"
     #raftLogFD = open(raftLogFile, "wr")
@@ -202,10 +202,10 @@ if __name__ == '__main__':
                 "Init Requests count in object": initial_count_commands,
                 "Fin Requests count in object": final_count_commands,
                 "Total Succ Requests": _g_success,
-                "ERROR_CNT_QUEUE_FULL    ": _g_errors[FAIL_REASON.QUEUE_FULL],     #: Commands queue full
+                "ERROR_CNT_QUEUE_FULL ": _g_errors[FAIL_REASON.QUEUE_FULL],     #: Commands queue full
                 "ERROR_CNT_MISSING_LEADER": _g_errors[FAIL_REASON.MISSING_LEADER],      #: Leader is currently missing (leader election in progress, or no connection)
-                "ERROR_CNT_DISCARDED     ": _g_errors[FAIL_REASON.DISCARDED],      #: Command discarded (cause of new leader elected and another command was applied instead)
-                "ERROR_CNT_NOT_LEADER    ": _g_errors[FAIL_REASON.NOT_LEADER],       #: Leader has changed, old leader did not have time to commit command.
+                "ERROR_CNT_DISCARDED ": _g_errors[FAIL_REASON.DISCARDED],      #: Command discarded (cause of new leader elected and another command was applied instead)
+                "ERROR_CNT_NOT_LEADER ": _g_errors[FAIL_REASON.NOT_LEADER],       #: Leader has changed, old leader did not have time to commit command.
                 "ERROR_CNT_LEADER_CHANGED": _g_errors[FAIL_REASON.LEADER_CHANGED],      #: Simmilar to NOT_LEADER - leader has changed without command commit.
                 "ERROR_CNT_REQUEST_DENIED": _g_errors[FAIL_REASON.REQUEST_DENIED],      #: Command denied}
                 "Time of experiment": tot_time_experiment,
