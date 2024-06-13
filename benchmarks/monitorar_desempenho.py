@@ -40,7 +40,7 @@ def monitorar_desempenho():
         results = {'Data hora':data_hora, 
                     'CPU': uso_cpu, 
                     'Memória': uso_memoria, 
-                    'Upload': velocidade_upload, 
+                    'Upload': velocidade_upload,                                                  
                     'Download': velocidade_download
                     }
         filename = 'desempenho_base.txt'
