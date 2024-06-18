@@ -13,6 +13,7 @@ from ocpp.charge_point import ChargePoint as CP_BASIC
 
 from ocpp_server import *
 import configparser
+from find_ip_addr import ip_address_assign
 
 try:
     import websockets
@@ -36,7 +37,7 @@ class ChargePointManagementNode(SyncObj):
     5. Terá o endereço e porta para comunicação TCP do Raft e endereço e porta para comunicação OCPP por websockets
     '''
     cfg = SyncObjConf(
-            autoTick=True,
+            autoTick=False,
             appendEntriesUseBatch=False,
             commandsWaitLeader=True, #Commands will be queued to be futher processed by the leader
             dynamicMembershipChange=False, #To allow changes on the nodes,
@@ -62,6 +63,12 @@ class ChargePointManagementNode(SyncObj):
         self.cp_ids = [] #IDs de pontos de carregamento que se conectam
         self.websockets_conn = [] #Conexões websockets criadas entre CSMS e CPs
         self.server = None
+        self.experiment = False
+    
+    @replicated
+    def force_election(self):
+        common_value = 10
+        return common_value
         
     #################################### RAFT segment ################################
     def add_node_to_cluster(self, node):
@@ -120,11 +127,18 @@ class ChargePointManagementNode(SyncObj):
         self.websockets_conn.append(websocket)
 
         await charge_point.start()
+    
+    def get_csms_address(self):
+        if self.experiment: 
+            port = 2914
+        else:
+            port = self.port + random.randint(8000, 9000)
+        return port 
 
     async def csms_routine(self):
         #  deepcode ignore BindToAllNetworkInterfaces: <Example Purposes>
         while True:
-            port = self.port + random.randint(50,100)
+            port = self.get_csms_address()
             if not self.server and (self._isLeader() or self._getLeader() is None):
                 self.server = await websockets.serve(
                     self.on_connect, "0.0.0.0", port, subprotocols=["ocpp2.0.1"],ping_interval=None
@@ -172,6 +186,7 @@ async def raft_routine(server_node:ChargePointManagementNode, selfNodeAddr, othe
         #print(f"LEADER: {leader}")
         #print(f"PARTNERS COUNT: {partners_count}")
         #print(f"RAFT TER: {raft_term}")
+        o.force_election()
         await asyncio.sleep(2)
         if o._getLeader() is None:
             continue
@@ -181,7 +196,7 @@ async def main(config_path):
     config.read(config_path)
     
     if 'MY_ADDR' not in config or 'PARTNERS_ADDR' not in config:
-        print('Error: [MY_ADDR] or [PARTNERS_ADDR] section not found in cluster_init_conf.ini')
+        print(f'Error: [MY_ADDR] or [PARTNERS_ADDR] section not found in {config_path}')
         sys.exit(-1)
     
     my_address = config['MY_ADDR'].get('self')

@@ -9,6 +9,37 @@ from .config import SERIALIZER_STATE
 
 logger = logging.getLogger(__name__)
 
+import asyncio
+
+def clean_data_for_serialization(data):
+    if isinstance(data, asyncio.Future):
+        if data.done():
+            return data.result()
+        else:
+            logger.warning(f"Found an unfinished asyncio.Future object: {data}")
+            return "FUTURE_PLACEHOLDER"
+    elif isinstance(data, list):
+        return [clean_data_for_serialization(item) for item in data]
+    elif isinstance(data, dict):
+        return {key: clean_data_for_serialization(value) for key, value in data.items()}
+    logger.debug(f"Serialized data type: {type(data)}")
+    return data
+
+def debug_data_structure(data, path="root"):
+    if isinstance(data, asyncio.Future):
+        logger.error(f"Found asyncio.Future at {path}")
+    elif isinstance(data, list):
+        for i, item in enumerate(data):
+            debug_data_structure(item, f"{path}[{i}]")
+    elif isinstance(data, dict):
+        for key, value in data.items():
+            debug_data_structure(value, f"{path}.{key}")
+    else:
+        logger.debug(f"Data at {path}: {type(data)}")
+
+def debug_and_clean_data(data):
+    debug_data_structure(data)
+    return clean_data_for_serialization(data)
 
 class Serializer(object):
     def __init__(self, fileName, transmissionBatchSize, tryUseFork,
@@ -58,7 +89,7 @@ class Serializer(object):
             self.__pid = 0
             return SERIALIZER_STATE.FAILED, self.__currentID
         return SERIALIZER_STATE.SERIALIZING, self.__currentID
-
+    """ 
     def serialize(self, data, id):
         if self.__pid != 0:
             return
@@ -96,6 +127,54 @@ class Serializer(object):
             else:
                 self.__pid = -1
         except Exception as e:
+            if self.__useFork:
+                os._exit(-1)
+            else:
+                self.__pid = -2
+    """
+
+    def serialize(self, data, id):
+        if self.__pid != 0:
+            return
+
+        self.__currentID = id
+
+        # Debug and clean the data before serialization
+        logger.info("Cleaning data before serialization.")
+        data = debug_and_clean_data(data)
+
+        # In-memory case
+        if self.__fileName is None:
+            with BytesIO() as io:
+                with gzip.GzipFile(fileobj=io, mode='wb') as g:
+                    pickle.dump(data, g)
+                self.__inMemorySerializedData = io.getvalue()
+            self.__pid = -1
+            return
+
+        # File case
+        if self.__useFork:
+            pid = os.fork()
+            if pid != 0:
+                self.__pid = pid
+                return
+
+        try:
+            tmpFile = self.__fileName + '.tmp'
+            if self.__serializer is not None:
+                self.__serializer(tmpFile, data[1:])
+            else:
+                with open(tmpFile, 'wb') as f:
+                    with gzip.GzipFile(fileobj=f, mode='wb') as g:
+                        pickle.dump(data, g)
+
+            atomicReplace(tmpFile, self.__fileName)
+            if self.__useFork:
+                os._exit(0)
+            else:
+                self.__pid = -1
+        except Exception as e:
+            logger.error(f"Serialization failed: {e}")
             if self.__useFork:
                 os._exit(-1)
             else:

@@ -1309,7 +1309,61 @@ class SyncObj(object):
         if commandType != _COMMAND_TYPE.MEMBERSHIP:
             return None
         return pickle.loads(command[1:])
+    
+    def __tryLogCompaction(self):
+        currTime = monotonicTime()
+        serializeState, serializeID = self.__serializer.checkSerializing()
 
+        if serializeState == SERIALIZER_STATE.SUCCESS:
+            self.__lastSerializedTime = currTime
+            self.__deleteEntriesTo(serializeID)
+            self.__lastSerializedEntry = serializeID
+
+        if serializeState == SERIALIZER_STATE.FAILED:
+            logger.warning('Failed to store full dump')
+
+        if serializeState != SERIALIZER_STATE.NOT_SERIALIZING:
+            return
+
+        if len(self.__raftLog) <= self.__conf.logCompactionMinEntries and \
+                currTime - self.__lastSerializedTime <= self.__conf.logCompactionMinTime and \
+                not self.__forceLogCompaction:
+            return
+
+        if self.__conf.logCompactionSplit:
+            allNodeIds = sorted([node.id for node in (self.__otherNodes | {self.__selfNode})])
+            nodesCount = len(allNodeIds)
+            selfIdx = allNodeIds.index(self.__selfNode.id)
+            interval = self.__conf.logCompactionMinTime
+            periodStart = int(currTime / interval) * interval
+            nodeInterval = float(interval) / nodesCount
+            nodeIntervalStart = periodStart + selfIdx * nodeInterval
+            nodeIntervalEnd = nodeIntervalStart + 0.3 * nodeInterval
+            if currTime < nodeIntervalStart or currTime >= nodeIntervalEnd:
+                return
+
+        self.__forceLogCompaction = False
+
+        lastAppliedEntries = self.__getEntries(self.__raftLastApplied - 1, 2)
+        if len(lastAppliedEntries) < 2 or lastAppliedEntries[0][1] == self.__lastSerializedEntry:
+            self.__lastSerializedTime = currTime
+            return
+
+        if self.__conf.serializer is None:
+            selfData = dict([(k, v) for k, v in iteritems(self.__dict__) if k not in self.__properies])
+            data = selfData
+            if self.__consumers:
+                data = [selfData]
+                for consumer in self.__consumers:
+                    data.append(consumer._serialize())
+        else:
+            data = None
+        cluster = self.__otherNodes | {self.__selfNode}
+        logger.info("Calling serializer with cleaned data.")
+        self.__serializer.serialize((data, lastAppliedEntries[1], lastAppliedEntries[0], cluster), lastAppliedEntries[0][1])
+
+    
+    """ 
     def __tryLogCompaction(self):
         currTime = monotonicTime()
         serializeState, serializeID = self.__serializer.checkSerializing()
@@ -1360,6 +1414,7 @@ class SyncObj(object):
             data = None
         cluster = self.__otherNodes | {self.__selfNode}
         self.__serializer.serialize((data, lastAppliedEntries[1], lastAppliedEntries[0], cluster), lastAppliedEntries[0][1])
+    """
 
     def __loadDumpFile(self, clearJournal):
         try:
