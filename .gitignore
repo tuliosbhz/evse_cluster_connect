@@ -1,0 +1,13 @@
+.idea/*
+
+venv/*
+build/*
+dist/*
+
+topypi
+MANIFEST
+
+*.pyc
+*.storage
+*.log
+*.state_machine

@@ -1,0 +1,14 @@
+Metadata-Version: 2.1
+Name: raftos
+Version: 0.2.6
+Summary: Raft replication in Python
+Home-page: https://github.com/zhebrak/raftos
+Author: Alexander Zhebrak
+Author-email: fata2ex@gmail.com
+License: MIT
+Keywords: python,raft,replication
+Platform: UNKNOWN
+License-File: LICENSE
+
+Raft replication in Python
+
