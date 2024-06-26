@@ -15,6 +15,10 @@ from ocpp.v201 import call
 
 from opt_scheduler import calculate_optimized_charging_schedule
 
+from metrics_logger import MetricsLogger
+# Inicialização do metrics_logger
+metrics_logger = MetricsLogger()
+
 logging.basicConfig(level=logging.INFO)
 
 class CSMS(cp):
@@ -43,25 +47,18 @@ class CSMS(cp):
         self.charging_profile = None
         self.transaction_id = ""
 
-        # Initialize file for benchmarks
-        current_time = datetime.now().strftime("%m-%d-%Y")
-        self.benchmark_file = f"benchmarks_{current_time}.csv"
-        logging.info(f"Creating benchmark file at: {os.path.abspath(self.benchmark_file)}")
-        with open(self.benchmark_file, mode='w', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow(["Timestamp", "Message", "Latency", "Size(Bytes)", "Debit(Mbps)", "TransactionID", "EVSEID", "CPID", "Interval"])
-
     def record_benchmark(self, message, start_time, msg_size):
-        latency = time.time() - start_time
-        debit = (msg_size * 8) / (latency * 1_000_000)  # Convert bytes to bits and divide by time in microseconds
-        logging.info(f"Recording benchmark for message: {message}, latency: {latency}, size: {msg_size}, debit: {debit}")
         try:
-            with open(self.benchmark_file, mode='a', newline='') as file:
-                writer = csv.writer(file)
-                writer.writerow([
-                    datetime.now().isoformat(), message, latency, msg_size, debit, 
-                    self.transaction_id, self.evse_id, self.cp_id, self.interval
-                ])
+            end_time = time.time()
+            latency = end_time - start_time
+            logging.info(f"Recording benchmark for message: {message}, latency: {latency}, size: {msg_size}")
+            metrics_logger.record_ocpp_latency(start_time, end_time)
+            metrics_logger.record_ocpp_throughput(msg_size)
+            metrics_logger.log_ocpp_metrics(message,
+                                            self.transaction_id, 
+                                            self.evse_id,
+                                            self.cp_id,
+                                            self.interval)
         except Exception as e:
             logging.error(f"Failed to write benchmark data: {e}")
 

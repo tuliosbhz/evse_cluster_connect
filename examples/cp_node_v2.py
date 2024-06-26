@@ -14,7 +14,14 @@ class ChargePointManagementNode:
         self.server = None
         raftos.configure({
         'log_path': './',
-        'serializer': raftos.serializers.JSONSerializer
+        'serializer': raftos.serializers.JSONSerializer,
+        'heartbeat_interval': 1,
+        # Leader will step down if it doesn't have a majority of follower's responses
+        # for this amount heartbeats
+        'step_down_missed_heartbeats': 4,
+        # Randomized election timeout
+        # [step_down_missed_heartbeats, M * step_down_missed_heartbeats]
+        'election_interval_spread': 6
         })
         self.raft_node = selfNodeAddr #format should be "ip:port"
         self.raft_cluster = otherNodeAddrs #format should be "ip:port"
@@ -81,6 +88,11 @@ class ChargePointManagementNode:
     async def raft_routine(node_id):
         while True:
             print(raftos.get_leader())
+            if raftos.get_leader() == None:
+                #Marcar tempo antes de se ter um lider
+                await raftos.State.wait_for_election_success()
+                #Marcar o tempo de quando se obtem um lider
+                #Diferença dos tempos determina o tempo da eleição
 
             await asyncio.sleep(2)
 
@@ -96,8 +108,8 @@ async def main(config_path):
     config = configparser.ConfigParser()
     config.read(config_path)
 
-    if 'MY_ADDR' not in config or 'PARTNERS_ADDR' not in config:
-        print('Error: [MY_ADDR] or [PARTNERS_ADDR] section not found in the config file')
+    if 'MY_ADDR' not in config or 'NODES_ADDR' not in config:
+        print('Error: [MY_ADDR] or [NODES_ADDR] section not found in the config file')
         sys.exit(-1)
 
     my_address = config['MY_ADDR'].get('self')
@@ -105,7 +117,7 @@ async def main(config_path):
         print('Error: No self address found in the [MY_ADDR] section of the config file')
         sys.exit(-1)
 
-    partners = [config['PARTNERS_ADDR'][key] for key in config['PARTNERS_ADDR']]
+    partners = [config['NODES_ADDR'][key] for key in config['NODES_ADDR']]
     port = int(config['SERVER_CONFIG']['port'])
     print(partners)
     server_node = ChargePointManagementNode(my_address, partners, port)

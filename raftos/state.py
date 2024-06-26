@@ -6,6 +6,10 @@ from .conf import config
 from .exceptions import NotALeaderException
 from .storage import FileStorage, Log, StateMachine
 from .timer import Timer
+import time
+from metrics_logger import MetricsLogger
+
+metrics_logger = MetricsLogger()
 
 
 def validate_term(func):
@@ -206,6 +210,7 @@ class Leader(BaseState):
             })
 
             asyncio.ensure_future(self.state.send(data, destination), loop=self.loop)
+            self.state.sent_requests[self.request_id] = time.time()  # Record start time
 
     @validate_commit_index
     @validate_term
@@ -237,6 +242,12 @@ class Leader(BaseState):
         # or in case there are new entries to sync (data['success'] == data['updated'] == True)
         if self.log.last_log_index >= self.log.next_index[sender_id]:
             asyncio.ensure_future(self.append_entries(destination=sender_id), loop=self.loop)
+
+        # Record end time and calculate latency
+        start_time = self.state.sent_requests.pop(data['request_id'], None)
+        if start_time:
+            latency = time.time() - start_time
+            metrics_logger.record_raft_message_latency(latency)
 
     def update_commit_index(self):
         commited_on_majority = 0
@@ -322,6 +333,7 @@ class Candidate(BaseState):
             'last_log_term': self.log.last_log_term
         }
         self.state.broadcast(data)
+        self.state.sent_requests[self.id] = time.time()  # Record start time
 
     @validate_term
     def on_receive_request_vote_response(self, data):
@@ -334,6 +346,12 @@ class Candidate(BaseState):
 
             if self.state.is_majority(self.vote_count):
                 self.state.to_leader()
+
+        # Record end time and calculate latency
+        start_time = self.state.sent_requests.pop(self.id, None)
+        if start_time:
+            latency = time.time() - start_time
+            metrics_logger.record_raft_message_latency(latency)
 
     @validate_term
     def on_receive_append_entries(self, data):
@@ -384,6 +402,7 @@ class Follower(BaseState):
     @validate_commit_index
     @validate_term
     def on_receive_append_entries(self, data):
+        start_time = time.time()
         self.state.set_leader(data['leader_id'])
 
         # Reply False if log doesn’t contain an entry at prev_log_index whose term matches prev_log_term
@@ -504,6 +523,7 @@ class State:
         self.server = server
         self.id = self._get_id(server.host, server.port)
         self.__class__.loop = self.server.loop
+        self.sent_requests = {}  # Initialize sent_requests here
 
         self.storage = FileStorage(self.id)
         self.log = Log(self.id)

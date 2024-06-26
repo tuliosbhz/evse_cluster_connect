@@ -4,6 +4,11 @@ import functools
 from .network import UDPProtocol
 from .state import State
 
+import time
+from metrics_logger import MetricsLogger
+
+metrics_logger = MetricsLogger()
+
 
 async def register(*address_list, cluster=None, loop=None):
     """Start Raft node (server)
@@ -78,6 +83,7 @@ class Node:
             data — serializable object
             destination — <str> '127.0.0.1:8000' or <tuple> (127.0.0.1, 8000)
         """
+        start_time = time.time()
         if isinstance(destination, str):
             host, port = destination.split(':')
             destination = host, int(port)
@@ -86,8 +92,13 @@ class Node:
             'data': data,
             'destination': destination
         })
+        end_time = time.time()
+        latency = end_time - start_time
+        metrics_logger.record_raft_message_latency(latency)
+        metrics_logger.record_raft_message_throughput(1)
 
     def broadcast(self, data):
         """Sends data to all Nodes in cluster (cluster list does not contain self Node)"""
         for destination in self.cluster:
             asyncio.ensure_future(self.send(data, destination), loop=self.loop)
+            metrics_logger.record_raft_message_throughput(1)

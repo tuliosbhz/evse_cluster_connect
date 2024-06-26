@@ -2,7 +2,7 @@ from .conf import configure, config
 from .replicator import Replicated, ReplicatedDict, ReplicatedList
 from .server import register, stop
 from .state import State
-
+from metrics_logger import MetricsLogger
 
 __all__ = [
     'Replicated',
@@ -16,6 +16,8 @@ __all__ = [
 
     'get_leader',
     'wait_until_leader'
+
+    'MetricsLogger'
 ]
 
 
