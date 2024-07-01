@@ -1,8 +1,14 @@
 #!/usr/bin/env python
+import os
+import sys
+# Adicionar o diretório raiz do projeto ao caminho do sistema
+script_dir = os.path.dirname(__file__)
+project_root = os.path.abspath(os.path.join(script_dir, '..'))
+sys.path.insert(0, project_root)
+
 import asyncio
 import configparser
 import logging
-import sys
 import raftos
 import websockets
 from websockets import serve

@@ -34,9 +34,59 @@ class ChargePointManagementNode:
         })
         self.raft_node = selfNodeAddr
         self.raft_cluster = nodeAddrs
+        logging.info(f"MY_ADDRESS: {self.raft_node}")
         logging.info(f"CLUSTER FOR EXPERIMENT: {self.raft_cluster}")
+        self.active_ocpp_servers = None #raftos.ReplicatedDict(name="active_ocpp_servers")
 
-    async def on_connect(self, websocket, path):
+
+    async def raft_start(self):
+        """
+        Responsável por:
+        - registar um novo cluster 
+        - Inicializar os dados replicados
+        - Informa a outros nós que o nó raft está ativo
+
+        Inicializa todos os nós configurados como ativos e os 
+        próprios nós quando se desligam se desativam
+        """
+        await raftos.register(self.raft_node, cluster=self.raft_cluster)
+        self.active_ocpp_servers = raftos.ReplicatedDict(name="active_ocpp_servers")
+        leader = raftos.get_leader()
+        if self.raft_node in self.raft_cluster and self.raft_node == leader:
+            await self.active_ocpp_servers.update({str(self.raft_node): 0})
+        else:
+            logging.warning(f"Node not on cluster: {self.raft_node}  or not the leader {leader}")
+
+
+    async def raft_stop(self):
+        """
+        Responsável por:
+        - Atualizar os dados replicados finalizando contribuição
+        - finalizar o nó no cluster
+        - Informa a outros nós quando o nó raft não está mais ativo
+        """
+        #await self.active_nodes.update({str(self.raft_node): 0})
+        #await self.active_ocpp_servers.update({str(self.raft_node): 0})
+
+    async def raft_routine(self):
+        """
+        Responsável por:
+        - Mantem os dados replicados atualizados
+        """
+        old_leader = ""
+        while True:
+            try:
+                leader = raftos.get_leader()
+                if leader != old_leader and leader is not None:
+                    old_leader = leader
+                    logging.info(f"Current Leader: {leader}")
+                    if leader == self.raft_node:
+                        await self.active_ocpp_servers.update({str(self.raft_node): 1})                    
+                await asyncio.sleep(0.8)
+            except Exception as e:
+                await self.raft_stop()
+
+    async def on_ocpp_client_connect(self, websocket, path):
         try:
             requested_protocols = websocket.request_headers["Sec-WebSocket-Protocol"]
         except KeyError:
@@ -58,41 +108,26 @@ class ChargePointManagementNode:
 
         await charge_point.start()
 
-    async def open_connections(self):
+    async def activate_ocpp_server(self):
         self.server = await websockets.serve(
-            self.on_connect, "0.0.0.0", self.port, subprotocols=["ocpp2.0.1"], ping_interval=None
+            self.on_ocpp_client_connect, "0.0.0.0", self.port, subprotocols=["ocpp2.0.1"], ping_interval=None
         )
         logging.info("Server Started listening to new connections...")
         await self.server.wait_closed()
 
     async def csms_routine(self):
         while True:
-            leader = raftos.get_leader()
-            if leader == self.raft_node:
-                if not self.server:
-                    csms_task = asyncio.create_task(self.open_connections())
+            active_servers_dict = dict(self.active_ocpp_servers)
+            logging.info(active_servers_dict)
+            if active_servers_dict[self.raft_node] == 1:
+                    csms_task = asyncio.create_task(self.activate_ocpp_server())
                     await asyncio.sleep(0.5)
             else:
                 if self.server:
                     self.server.close()
                     await self.server.wait_closed()
                     self.server = None
-            await asyncio.sleep(0.8)
-
-    async def raft_routine(self):
-        was_leader = False
-        while True:
-            leader = raftos.get_leader()
-            logging.info(f"Current Leader: {leader}")
-            if leader is None:
-                if not was_leader:
-                    metrics_logger.start_election()
-                    was_leader = True
-            else:
-                if was_leader:
-                    metrics_logger.end_election()
-                    was_leader = False
-            await asyncio.sleep(1)
+                await asyncio.sleep(1)
 
     async def close(self):
         if self.server:
@@ -117,7 +152,7 @@ class ExperimentManager:
         self.heartbeat = 0.1
         self.step_down_leader = 5
         self.election_interval = 3
-        self.log_timing = 120 
+        self.log_timing = 120
         self.failures_multiplier = 3 #Multiplica pelo intervalo entre falhas 3 * log_timing
         self.failures_counter = 0
 
@@ -137,8 +172,8 @@ class ExperimentManager:
         server_node = ChargePointManagementNode(my_address, cluster, int(config['SERVER_CONFIG']['port']))
 
         try:
+            await server_node.raft_start()
             server_start_task = asyncio.create_task(server_node.csms_routine())
-            raft_reg_task = asyncio.create_task(raftos.register(server_node.raft_node, cluster=server_node.raft_cluster)) if my_address in cluster else None
             raft_rou_task = asyncio.create_task(server_node.raft_routine())
             failure_task = asyncio.create_task(self.simulate_failures(server_node,
                                                                       heartbeat,
@@ -146,7 +181,7 @@ class ExperimentManager:
                                                                       election_spread))
 
             logging.info(f"Starting experiment with heartbeat={heartbeat}, step_down={step_down}, election_spread={election_spread}")
-            asyncio.gather(server_start_task, raft_reg_task, raft_rou_task, failure_task)
+            asyncio.gather(raft_rou_task, server_start_task, failure_task)
             await asyncio.sleep(self.duration)
         except Exception as e:
             logging.error(e)
@@ -167,6 +202,7 @@ class ExperimentManager:
 
     async def simulate_failures(self, server_node, raft_heart, raft_step_down, raft_election_spread):
         while True:
+            #Gaussiana com media em 120 segundos com desvio padrão de X segundos
             await asyncio.sleep(120)  # Simula falhas a cada 2 minutos se for o lider e dobra o tempo a cada falha
             metrics_logger.log_raft_metrics(raft_heart,raft_step_down, raft_election_spread)
             if self.failures_counter == self.failures_multiplier:

@@ -16,11 +16,13 @@ async def register(*address_list, cluster=None, loop=None):
         address_list — 127.0.0.1:8000 [, 127.0.0.1:8001 ...]
         cluster — [127.0.0.1:8001, 127.0.0.1:8002, ...]
     """
+    nodes = []
 
     loop = loop or asyncio.get_event_loop()
     for address in address_list:
         host, port = address.rsplit(':', 1)
         node = Node(address=(host, int(port)), loop=loop)
+        nodes.append(node)
         await node.start()
 
         for address in cluster:
@@ -29,7 +31,8 @@ async def register(*address_list, cluster=None, loop=None):
 
             if (host, port) != (node.host, node.port):
                 node.update_cluster((host, port))
-
+        
+        return nodes
 
 def stop():
     for node in Node.nodes:

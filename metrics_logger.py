@@ -121,29 +121,21 @@ class MetricsLogger:
             ])
         self.reset_raft_metrics()
 
-    def log_ocpp_metrics(self, message, transaction_id, evse_id, cp_id, heartbeat_interval):
+    def log_ocpp_metrics(self, ocpp_active_clients, ocpp_denied_boots, heartbeat_interval):
         with open(self.ocpp_file_name, mode='a', newline='') as file:
             writer = csv.writer(file)
             if not self.ocpp_headers_written:
                 writer.writerow([
                     "Timestamp",
-                    "OCPP Message Name",
-                    "Average OCPP Latency",
-                    "OCPP Throughput",
-                    "TransactionID",
-                    "EVSEID",
-                    "CPID",
+                    "OCPP active clientes",
+                    "OCPP denied cps",
                     "HeartbeatInterval",
                 ])
                 self.ocpp_headers_written = True
             writer.writerow([
                 datetime.now().strftime("%m-%d-%Y_%H:%M:%S"),
-                message,
-                sum(self.ocpp_latency) / len(self.ocpp_latency) if self.ocpp_latency else 0,
-                self.ocpp_throughput,
-                transaction_id,
-                evse_id,
-                cp_id,
+                ocpp_active_clients,
+                ocpp_denied_boots,
                 heartbeat_interval
             ])
         self.reset_ocpp_metrics()
