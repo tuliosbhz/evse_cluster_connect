@@ -42,7 +42,7 @@ async def on_ocpp_client_connect(websocket, path):
 
 async def activate_ocpp_server():
     server = await websockets.serve(
-        on_ocpp_client_connect, "0.0.0.0", 2913, subprotocols=["ocpp2.0.1"], ping_interval=None
+        on_ocpp_client_connect, "0.0.0.0", 2914, subprotocols=["ocpp2.0.1"], ping_interval=None
     )
     logging.info("Server Started listening to new connections...")
     await server.wait_closed()
