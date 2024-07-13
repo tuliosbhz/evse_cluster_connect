@@ -108,11 +108,8 @@ class ChargePointManagementNode:
                             self.server.close()
                             await self.server.wait_closed()
                             self.server = None
-                else:
-                    csms_task = asyncio.create_task(self.activate_ocpp_server())
-                    await asyncio.sleep(0.5)
             
-            metrics_logger.log_raft_metrics(0.1 ,5 , 3)
+            metrics_logger.log_raft_metrics(0.1 ,5, 3)
             await asyncio.sleep(1)
 
     async def close(self):

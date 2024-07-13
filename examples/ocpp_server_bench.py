@@ -51,19 +51,45 @@ class CSMS(cp):
         self.successfull_transactions = 0
         self.connected_ocpp_clients = []
         self.max_ocpp_connections = 30
+        self.session_data_list = []
+        self.evse_to_session = {}
 
-    def record_benchmark(self):
-        try:
-            logging.info(f"Recording benchmark -> Connected ocpp clients: {len(self.connected_ocpp_clients)}, latency: {latency}, size: {msg_size}")
-            metrics_logger.record_ocpp_latency(start_time, end_time)
-            metrics_logger.record_ocpp_throughput(msg_size)
-            metrics_logger.log_ocpp_metrics(message,
-                                            self.transaction_id, 
-                                            self.evse_id,
-                                            self.cp_id,
-                                            self.interval)
-        except Exception as e:
-            logging.error(f"Failed to write benchmark data: {e}")
+    def get_session_data(self, session_id, evse_id):
+        for session_data in self.session_data_list:
+            if session_data["session_id"] == session_id and session_data["evse_id"] == evse_id:
+                return session_data
+        return None
+
+    def update_session_data(self, session_id, evse_id, **kwargs):
+        session_data = self.get_session_data(session_id, evse_id)
+        if not session_data:
+            session_data = {
+                "session_id": session_id,
+                "evse_id": evse_id,
+                "start_time": time.time(),
+                "Eamount": 0,
+                "EvMinCurrent": 0,
+                "EvMaxCurrent": 0,
+                "EvMaxVoltage": 0,
+                "departureTime": 0,
+                "max_schedule_tuples": 0,
+                "end_time": time.time()
+            }
+            self.session_data_list.append(session_data)
+
+        for key, value in kwargs.items():
+            if key in session_data:
+                session_data[key] = value
+
+    def log_session_data_to_csv(self, session_data):
+        fieldnames = ["session_id", "evse_id", "start_time", "Eamount", "EvMinCurrent", "EvMaxCurrent", "EvMaxVoltage", "departureTime", "max_schedule_tuples", "end_time"]
+        file_exists = os.path.isfile('session_data.csv')
+        with open('session_data.csv', mode='a', newline='') as file:
+            writer = csv.DictWriter(file, fieldnames=fieldnames)
+            if not file_exists:
+                writer.writeheader()
+            writer.writerow(session_data)
+            self.session_data_list.remove(session_data)
 
     @on("BootNotification")
     async def on_boot_notification(self, charging_station, reason, **kwargs):
@@ -72,7 +98,7 @@ class CSMS(cp):
             self.connected_ocpp_clients.append(charging_station)
         else: 
             status ="Rejected"
-        self.interval = 3 #random.randint(3, 15)
+        self.interval = 3
         result = call_result.BootNotification(
             current_time=datetime.now().isoformat(), interval=self.interval, status=status, custom_data=self.leader_address
         )
@@ -87,16 +113,28 @@ class CSMS(cp):
     
     @on("TransactionEvent")
     async def on_transaction_event(self, event_type, timestamp, trigger_reason, seq_no, transaction_info, **kwargs):
+        self.transaction_id = transaction_info["transaction_id"]
         if trigger_reason == "EVDetected":
             self.departure_time = timestamp
-        self.transaction_id = transaction_info["transaction_id"]
-        #self.transaction_id = transaction_info["transaction_id"]
+            # Register session_id with evse_id
+            self.evse_to_session[self.evse_id] = self.transaction_id
+            self.update_session_data(self.transaction_id, self.evse_id, departureTime=self.departure_time)
+        if event_type == "Ended":
+            for evse_id, t_id in self.evse_to_session.items():
+                if t_id == self.transaction_id:
+                    session_data = self.get_session_data(self.transaction_id, evse_id)
+                    session_data["end_time"] = time.time()
+                    self.log_session_data_to_csv(session_data)
+        
         result = call_result.TransactionEvent()
         return result
     
     @on("StatusNotification")
     async def on_status_notification(self, timestamp, connector_status, evse_id, connector_id, **kwargs):
         self.evse_id = evse_id
+        if connector_status == "Occupied":
+            if evse_id not in self.evse_to_session:
+                self.evse_to_session[evse_id] = None
         result = call_result.StatusNotification()
         return result
     
@@ -114,6 +152,23 @@ class CSMS(cp):
         self.departure_time = charging_needs['departure_time']
         logging.info(f"AC_PARAMS: {self.ac_charging_parameters}")
         result = call_result.NotifyEVChargingNeeds(status="Accepted")
+        # Benchmark 
+        # Update session data
+        if self.evse_id in self.evse_to_session:
+            session_id = self.evse_to_session[self.evse_id]
+            self.update_session_data(session_id, self.evse_id, Eamount=self.ac_charging_parameters["energy_amount"],
+                                     EvMinCurrent=self.ac_charging_parameters['ev_min_current'],
+                                     EvMaxCurrent=self.ac_charging_parameters['ev_max_current'],
+                                     EvMaxVoltage=self.ac_charging_parameters['ev_max_voltage'],
+                                     departureTime=self.departure_time,
+                                     max_schedule_tuples=self.max_schedule_tuples)
+        else:
+            self.update_session_data(self.transaction_id, self.evse_id, Eamount=self.ac_charging_parameters["energy_amount"],
+                                     EvMinCurrent=self.ac_charging_parameters['ev_min_current'],
+                                     EvMaxCurrent=self.ac_charging_parameters['ev_max_current'],
+                                     EvMaxVoltage=self.ac_charging_parameters['ev_max_voltage'],
+                                     departureTime=self.departure_time,
+                                     max_schedule_tuples=self.max_schedule_tuples)
         return result
     
     @after("NotifyEVChargingNeeds")
@@ -131,7 +186,7 @@ class CSMS(cp):
                                     'chargingProfileKind': 'Absolute',
                                     'chargingSchedule': [{'id': int(0),
                                                           'chargingRateUnit': "A",
-                                                          'chargingSchedulePeriod': [{'startPeriod': int(datetime.now().timestamp()), 'limit': int(7380)}]
+                                                          'chargingSchedulePeriod': [{'startPeriod': int(datetime.now().timestamp()), 'limit': int(32)}]
                                                           }]
                                     }
         request = call.SetChargingProfile(
@@ -141,3 +196,6 @@ class CSMS(cp):
         logging.info(f"Charging profile: {self.charging_profile}")
         response = await self.call(request)
         return response
+
+    async def close(self):
+        await self.conn.close()

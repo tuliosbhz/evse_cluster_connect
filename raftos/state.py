@@ -9,6 +9,8 @@ from .timer import Timer
 import time
 from metrics_logger import MetricsLogger
 
+import json
+
 metrics_logger = MetricsLogger()
 
 
@@ -71,6 +73,8 @@ class BaseState:
 
         self.id = self.state.id
         self.loop = self.state.loop
+
+        self.active_nodes = self.state.active_nodes
 
     @validate_term
     def on_receive_request_vote(self, data):
@@ -181,7 +185,7 @@ class Leader(BaseState):
 
             entries[] — log entries to store (empty for heartbeat)
         """
-
+        active_nodes_str = json.dumps(list(self.state.active_nodes))
         # Send AppendEntries RPC to destination if specified or broadcast to everyone
         destination_list = [destination] if destination else self.state.cluster
         for destination in destination_list:
@@ -192,7 +196,8 @@ class Leader(BaseState):
                 'leader_id': self.id,
                 'commit_index': self.log.commit_index,
 
-                'request_id': self.request_id
+                'request_id': self.request_id,
+                'active_nodes': active_nodes_str
             }
 
             next_index = self.log.next_index[destination]
@@ -216,7 +221,14 @@ class Leader(BaseState):
     @validate_term
     def on_receive_append_entries_response(self, data):
         sender_id = self.state.get_sender_id(data['sender'])
-
+        follower_id = data.get('follower_id')
+        if follower_id:
+            if isinstance(follower_id, str):
+                # Assuming the format '127.0.0.1:2002'
+                ip, port = follower_id.split(':')
+                self.state.active_nodes.add((ip, int(port)))
+            else:
+                self.state.active_nodes.add(follower_id)
         # Count all unqiue responses per particular heartbeat interval
         # and step down via <step_down_timer> if leader doesn't get majority of responses for
         # <step_down_missed_heartbeats> heartbeats
@@ -283,6 +295,17 @@ class Leader(BaseState):
         self.response_map[self.request_id] = set()
         asyncio.ensure_future(self.append_entries(), loop=self.loop)
 
+    def cluster_check(self):
+        print(f"Current active nodes {self.state.active_nodes}")
+        if len(self.state.active_nodes) > 1 and not self.state.is_majority(len(self.state.active_nodes)):
+            difference = self.state.server.cluster - self.state.active_nodes
+            if difference:
+                #node_to_remove = difference.pop()
+                node_to_remove = sorted(difference, key=lambda ip: list(map(int, ip.split('.'))), reverse=True)[0]
+                print(f"Old cluster: {self.state.server.cluster}")
+                self.state.server.cluster.remove(node_to_remove)
+                print(f"New cluster: {self.state.server.cluster}")
+
 
 class Candidate(BaseState):
     """Raft Candidate
@@ -301,8 +324,10 @@ class Candidate(BaseState):
 
         self.election_timer = Timer(self.election_interval, self.state.to_follower)
         self.vote_count = 0
+        self.responses_count = 0
 
     def start(self):
+        metrics_logger.start_election()
         """Increment current term, vote for herself & send vote requests"""
         self.storage.update({
             'term': self.storage.term + 1,
@@ -314,8 +339,10 @@ class Candidate(BaseState):
         self.election_timer.start()
 
     def stop(self):
+        metrics_logger.end_election()
+        self.cluster_check()
         self.election_timer.stop()
-
+    
     def request_vote(self):
         """RequestVote RPC — gather votes
         Arguments:
@@ -333,25 +360,33 @@ class Candidate(BaseState):
             'last_log_term': self.log.last_log_term
         }
         self.state.broadcast(data)
-        self.state.sent_requests[self.id] = time.time()  # Record start time
 
     @validate_term
     def on_receive_request_vote_response(self, data):
         """Receives response for vote request.
         If the vote was granted then check if we got majority and may become Leader
         """
+        """
+        Check here the way to check who voted
+        Compares who voted with the cluster ids
+        The ids that do not voted could be potential inactive nodes
+        If because of that majority is not reached than remove the one inactive node
+        Leave the process to be repeated
+        """
+        follower_id = data.get('follower_id')
+        if follower_id:
+            if isinstance(follower_id, str):
+                # Assuming the format '127.0.0.1:2002'
+                ip, port = follower_id.split(':')
+                self.state.active_nodes.add((ip, int(port)))
+            else:
+                self.state.active_nodes.add(follower_id)
 
         if data.get('vote_granted'):
             self.vote_count += 1
 
             if self.state.is_majority(self.vote_count):
                 self.state.to_leader()
-
-        # Record end time and calculate latency
-        start_time = self.state.sent_requests.pop(self.id, None)
-        if start_time:
-            latency = time.time() - start_time
-            metrics_logger.record_raft_message_latency(latency)
 
     @validate_term
     def on_receive_append_entries(self, data):
@@ -362,6 +397,16 @@ class Candidate(BaseState):
     @staticmethod
     def election_interval():
         return random.uniform(*config.election_interval)
+    
+    def cluster_check(self):
+        print(f"Current active nodes {self.state.active_nodes}")
+        if len(self.state.active_nodes) > 1 and not self.state.is_majority(len(self.state.active_nodes)):
+            difference = self.state.server.cluster - self.state.active_nodes
+            if difference:
+                node_to_remove = difference.pop()
+                print(f"Old cluster: {self.state.server.cluster}")
+                self.state.server.cluster.remove(node_to_remove)
+                print(f"New cluster: {self.state.server.cluster}")
 
 
 class Follower(BaseState):
@@ -404,7 +449,9 @@ class Follower(BaseState):
     def on_receive_append_entries(self, data):
         start_time = time.time()
         self.state.set_leader(data['leader_id'])
-
+        active_nodes_list = json.loads(data['active_nodes'])
+        self.state.active_nodes = set(tuple(node) for node in active_nodes_list)
+        #print(f"Received active nodes from leader: {self.state.active_nodes}")
         # Reply False if log doesn’t contain an entry at prev_log_index whose term matches prev_log_term
         try:
             prev_log_index = data['prev_log_index']
@@ -416,7 +463,8 @@ class Follower(BaseState):
                     'term': self.storage.term,
                     'success': False,
 
-                    'request_id': data['request_id']
+                    'request_id': data['request_id'],
+                    'follower_id': self.id
                 }
                 asyncio.ensure_future(self.state.send(response, data['sender']), loop=self.loop)
                 return
@@ -452,7 +500,8 @@ class Follower(BaseState):
             'success': True,
 
             'last_log_index': self.log.last_log_index,
-            'request_id': data['request_id']
+            'request_id': data['request_id'],
+            'follower_id': self.id
         }
         asyncio.ensure_future(self.state.send(response, data['sender']), loop=self.loop)
 
@@ -481,7 +530,8 @@ class Follower(BaseState):
             response = {
                 'type': 'request_vote_response',
                 'term': self.storage.term,
-                'vote_granted': up_to_date
+                'vote_granted': up_to_date,
+                'follower_id': self.id
             }
 
             asyncio.ensure_future(self.state.send(response, data['sender']), loop=self.loop)
@@ -528,6 +578,11 @@ class State:
         self.storage = FileStorage(self.id)
         self.log = Log(self.id)
         self.state_machine = StateMachine(self.id)
+
+        self.active_nodes = self.server.active_nodes
+        # Assuming the format '127.0.0.1:2002'
+        my_ip, my_port = self.id.split(':')
+        self.active_nodes.add((my_ip, int(my_port)))
 
         self.state = Follower(self)
 

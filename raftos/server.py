@@ -47,6 +47,7 @@ class Node:
     def __init__(self, address, loop):
         self.host, self.port = address
         self.cluster = set()
+        self.active_nodes = set()
 
         self.loop = loop
         self.state = State(self)
@@ -86,7 +87,6 @@ class Node:
             data — serializable object
             destination — <str> '127.0.0.1:8000' or <tuple> (127.0.0.1, 8000)
         """
-        start_time = time.time()
         if isinstance(destination, str):
             host, port = destination.split(':')
             destination = host, int(port)
@@ -95,9 +95,6 @@ class Node:
             'data': data,
             'destination': destination
         })
-        end_time = time.time()
-        latency = end_time - start_time
-        metrics_logger.record_raft_message_latency(latency)
         metrics_logger.record_raft_message_throughput(1)
 
     def broadcast(self, data):

@@ -59,14 +59,9 @@ class MetricsLogger:
     def record_ocpp_throughput(self, msg_size):
         total_latency = sum(self.ocpp_latency) if self.ocpp_latency else 1
         self.ocpp_throughput = (msg_size * self.requests * 8) / (total_latency * 1_000_000)
-
-    def record_failure(self):
-        self.failures += 1
-        self.start_downtime()
-
-    def record_repair(self):
-        self.repairs += 1
-        self.end_downtime()
+    
+    def record_ocpp_session(self, start_time, session_id):
+        self.sessions.append(session_id)
 
     def start_election(self):
         self.last_election_start = time.time()
@@ -96,11 +91,8 @@ class MetricsLogger:
                     "step_down_missed_heartbeats",
                     "election_interval_spread",
                     "Uptime",
-                    "MTBF",
-                    "MTTR",
                     "Average Election Time",
                     "Election Count",
-                    "Raft Message Failures",
                     "Average Raft Message Latency",
                     "Raft Message Throughput",
                 ])
@@ -110,12 +102,9 @@ class MetricsLogger:
                 heartbeat, #heartbeat_interval
                 step_down, #step_down_missed_heartbeats
                 election_spread, #election_interval_spread
-                time.time() - self.start_time - self.downtime, #uptime
-                (time.time() - self.start_time) / self.failures if self.failures else 0, #MTBF 
-                self.downtime / self.repairs if self.repairs else 0, #MTTR
+                time.time() - self.start_time - sum(self.election_times), #uptime
                 sum(self.election_times) / len(self.election_times) if self.election_times else 0, #Average election time
                 self.election_count, #election count
-                self.raft_message_failures,
                 sum(self.raft_message_latencies) / len(self.raft_message_latencies) if self.raft_message_latencies else 0,
                 self.raft_message_throughput,
             ])
