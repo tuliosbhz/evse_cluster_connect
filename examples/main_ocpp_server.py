@@ -53,7 +53,7 @@ async def csms_routine():
         try:
             if not csms_task:
                 csms_task = asyncio.create_task(activate_ocpp_server())
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(2)
         except Exception as e:
             logging.error(e)
 
