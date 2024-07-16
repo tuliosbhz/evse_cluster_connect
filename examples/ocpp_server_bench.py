@@ -64,6 +64,7 @@ class CSMS(cp):
         session_data = self.get_session_data(session_id, evse_id)
         if not session_data:
             session_data = {
+                "timestamp":datetime.now().strftime("%m-%d-%YT%H:%M:%S"),
                 "session_id": session_id,
                 "evse_id": evse_id,
                 "start_time": time.time(),
@@ -82,9 +83,10 @@ class CSMS(cp):
                 session_data[key] = value
 
     def log_session_data_to_csv(self, session_data):
-        fieldnames = ["session_id", "evse_id", "start_time", "Eamount", "EvMinCurrent", "EvMaxCurrent", "EvMaxVoltage", "departureTime", "max_schedule_tuples", "end_time"]
-        file_exists = os.path.isfile('session_data.csv')
-        with open('session_data.csv', mode='a', newline='') as file:
+        file_name = f"session_data{datetime.now().strftime('%m-%d-%Y')}"
+        fieldnames = ["timestamp","session_id", "evse_id", "start_time", "Eamount", "EvMinCurrent", "EvMaxCurrent", "EvMaxVoltage", "departureTime", "max_schedule_tuples", "end_time"]
+        file_exists = os.path.isfile(file_name)
+        with open(f'{file_name}.csv', mode='a', newline='') as file:
             writer = csv.DictWriter(file, fieldnames=fieldnames)
             if not file_exists:
                 writer.writeheader()
