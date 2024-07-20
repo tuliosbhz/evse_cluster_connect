@@ -1,12 +1,8 @@
-import asyncio
 import logging
 import time
 from datetime import datetime
-import random
 import csv
 import os
-import sys
-import json
 
 from ocpp.routing import on, after
 from ocpp.v201 import ChargePoint as cp
@@ -16,7 +12,6 @@ from ocpp.v201 import call
 from opt_scheduler import calculate_optimized_charging_schedule
 
 from metrics_logger import MetricsLogger
-# Inicialização do metrics_logger
 metrics_logger = MetricsLogger()
 
 logging.basicConfig(level=logging.INFO)
@@ -48,7 +43,7 @@ class CSMS(cp):
         self.charging_profile = None
         self.transaction_ids = []
         self.transaction_id = ""
-        self.successfull_transactions = 0
+        self.sessions_counter = 0
         self.connected_ocpp_clients = []
         self.max_ocpp_connections = 30
         self.session_data_list = []
@@ -74,7 +69,8 @@ class CSMS(cp):
                 "EvMaxVoltage": 0,
                 "departureTime": 0,
                 "max_schedule_tuples": 0,
-                "end_time": time.time()
+                "end_time": time.time(),
+                "total_sessions": self.sessions_counter
             }
             self.session_data_list.append(session_data)
 
@@ -83,10 +79,10 @@ class CSMS(cp):
                 session_data[key] = value
 
     def log_session_data_to_csv(self, session_data):
-        file_name = f"session_data{datetime.now().strftime('%m-%d-%Y')}"
-        fieldnames = ["timestamp","session_id", "evse_id", "start_time", "Eamount", "EvMinCurrent", "EvMaxCurrent", "EvMaxVoltage", "departureTime", "max_schedule_tuples", "end_time"]
+        file_name = f"session_data_{datetime.now().strftime('%m-%d-%Y')}.csv"
+        fieldnames = ["timestamp","session_id", "evse_id", "start_time", "Eamount", "EvMinCurrent", "EvMaxCurrent", "EvMaxVoltage", "departureTime", "max_schedule_tuples", "end_time", "total_sessions"]
         file_exists = os.path.isfile(file_name)
-        with open(f'{file_name}.csv', mode='a', newline='') as file:
+        with open(file_name, mode='a', newline='') as file:
             writer = csv.DictWriter(file, fieldnames=fieldnames)
             if not file_exists:
                 writer.writeheader()
@@ -100,7 +96,7 @@ class CSMS(cp):
             self.connected_ocpp_clients.append(charging_station)
         else: 
             status ="Rejected"
-        self.interval = 3
+        self.interval = 5 #5 seconds inter hearbeats for OCPP
         result = call_result.BootNotification(
             current_time=datetime.now().isoformat(), interval=self.interval, status=status, custom_data=self.leader_address
         )
@@ -118,7 +114,6 @@ class CSMS(cp):
         self.transaction_id = transaction_info["transaction_id"]
         if trigger_reason == "EVDetected":
             self.departure_time = timestamp
-            # Register session_id with evse_id
             self.evse_to_session[self.evse_id] = self.transaction_id
             self.update_session_data(self.transaction_id, self.evse_id, departureTime=self.departure_time)
         if event_type == "Ended":
@@ -135,6 +130,7 @@ class CSMS(cp):
     async def on_status_notification(self, timestamp, connector_status, evse_id, connector_id, **kwargs):
         self.evse_id = evse_id
         if connector_status == "Occupied":
+            self.sessions_counter += 1
             if evse_id not in self.evse_to_session:
                 self.evse_to_session[evse_id] = None
         result = call_result.StatusNotification()
