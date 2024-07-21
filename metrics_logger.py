@@ -18,7 +18,7 @@ class MetricsLogger:
         if self._initialized:
             return
         # Initialize file for benchmarks
-        current_time = datetime.now().strftime("%m-%d-%Y_%H_%M_%S")
+        current_time = datetime.now().strftime("%m-%d-%Y")
 
         self.raft_file_name = f"{file_name}_raft_{current_time}.csv"
         self.ocpp_file_name = f"{file_name}_ocpp_{current_time}.csv"
