@@ -75,6 +75,7 @@ class BaseState:
         self.loop = self.state.loop
 
         self.active_nodes = self.state.active_nodes
+        self.inactive_nodes = self.state.inactive_nodes
 
     @validate_term
     def on_receive_request_vote(self, data):
@@ -187,7 +188,15 @@ class Leader(BaseState):
         """
         active_nodes_str = json.dumps(list(self.state.active_nodes))
         # Send AppendEntries RPC to destination if specified or broadcast to everyone
-        destination_list = [destination] if destination else self.state.cluster
+        # Convert the set of tuples to a list of strings in the format 'ip:port'
+        inactive_nodes_list = [f"{ip}:{port}" for ip, port in self.state.inactive_nodes]
+
+        # Concatenate the list with the converted set
+        cluster_destinations = self.state.cluster + inactive_nodes_list  # Try to get in touch with inactive nodes every round
+
+        # Determine the destination list
+        destination_list = [destination] if destination else cluster_destinations  # Old implementation: self.state.cluster
+
         for destination in destination_list:
             data = {
                 'type': 'append_entries',
@@ -226,12 +235,18 @@ class Leader(BaseState):
             if isinstance(follower_id, str):
                 # Assuming the format '127.0.0.1:2002'
                 ip, port = follower_id.split(':')
-                self.state.active_nodes.add((ip, int(port)))
+                node = (ip, int(port))
             else:
-                self.state.active_nodes.add(follower_id)
+                node = follower_id
+
+            self.state.active_nodes.add(node)
+            if node in self.state.inactive_nodes:
+                self.state.inactive_nodes.remove(node)
+
         # Count all unqiue responses per particular heartbeat interval
         # and step down via <step_down_timer> if leader doesn't get majority of responses for
         # <step_down_missed_heartbeats> heartbeats
+        #self.cluster_check()
 
         if data['request_id'] in self.response_map:
             self.response_map[data['request_id']].add(sender_id)
@@ -249,7 +264,6 @@ class Leader(BaseState):
                 self.log.match_index[sender_id] = data['last_log_index']
 
             self.update_commit_index()
-
         # Send AppendEntries RPC to continue updating fast-forward log (data['success'] == False)
         # or in case there are new entries to sync (data['success'] == data['updated'] == True)
         if self.log.last_log_index >= self.log.next_index[sender_id]:
@@ -300,11 +314,18 @@ class Leader(BaseState):
         if len(self.state.active_nodes) > 1 and not self.state.is_majority(len(self.state.active_nodes)):
             difference = self.state.server.cluster - self.state.active_nodes
             if difference:
-                #node_to_remove = difference.pop()
+                self.state.inactive_nodes = difference
                 node_to_remove = sorted(difference, key=lambda ip: list(map(int, ip.split('.'))), reverse=True)[0]
                 print(f"Old cluster: {self.state.server.cluster}")
                 self.state.server.cluster.remove(node_to_remove)
                 print(f"New cluster: {self.state.server.cluster}")
+        elif len(self.state.active_nodes) > len(self.state.server.cluster):
+            nodes_to_add = self.state.active_nodes - self.state.server.cluster
+            if nodes_to_add:
+                for node in nodes_to_add:
+                    print(f"Old cluster: {self.state.server.cluster}")
+                    self.state.server.cluster.add(node)
+                    print(f"New cluster: {self.state.server.cluster}")
 
 
 class Candidate(BaseState):
@@ -340,7 +361,7 @@ class Candidate(BaseState):
 
     def stop(self):
         metrics_logger.end_election()
-        self.cluster_check()
+        #self.cluster_check()
         self.election_timer.stop()
     
     def request_vote(self):
@@ -403,7 +424,10 @@ class Candidate(BaseState):
         if len(self.state.active_nodes) > 1 and not self.state.is_majority(len(self.state.active_nodes)):
             difference = self.state.server.cluster - self.state.active_nodes
             if difference:
+                self.state.inactive_nodes = difference
+                print(f"Inactive nodes: {self.state.inactive_nodes}")
                 node_to_remove = difference.pop()
+                #node_to_remove = sorted(difference, key=lambda ip: list(map(int, ip.split('.'))), reverse=True)[0]
                 print(f"Old cluster: {self.state.server.cluster}")
                 self.state.server.cluster.remove(node_to_remove)
                 print(f"New cluster: {self.state.server.cluster}")
@@ -580,6 +604,7 @@ class State:
         self.state_machine = StateMachine(self.id)
 
         self.active_nodes = self.server.active_nodes
+        self.inactive_nodes = self.server.inactive_nodes
         # Assuming the format '127.0.0.1:2002'
         my_ip, my_port = self.id.split(':')
         self.active_nodes.add((my_ip, int(my_port)))

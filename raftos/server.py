@@ -48,6 +48,7 @@ class Node:
         self.host, self.port = address
         self.cluster = set()
         self.active_nodes = set()
+        self.inactive_nodes = set()
 
         self.loop = loop
         self.state = State(self)
