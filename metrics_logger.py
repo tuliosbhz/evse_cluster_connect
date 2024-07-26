@@ -21,7 +21,6 @@ class MetricsLogger:
         current_time = datetime.now().strftime("%m-%d-%Y")
 
         self.raft_file_name = f"{file_name}_raft_{current_time}.csv"
-        self.ocpp_file_name = f"{file_name}_ocpp_{current_time}.csv"
 
         self.start_time = time.time()
         self.downtime = 0
@@ -35,12 +34,9 @@ class MetricsLogger:
         self.raft_message_failures = 0
         self.raft_message_latencies = []
         self.raft_message_throughput = 0
-        self.ocpp_latency = []
-        self.ocpp_throughput = 0
-        self.ocpp_message_name = ""
         self.raft_headers_written = False
-        self.ocpp_headers_written = False
         self._initialized = True
+        self.last_log_time = time.time()
 
     def start_downtime(self):
         if self.last_down is None:
@@ -50,19 +46,7 @@ class MetricsLogger:
         if self.last_down is not None:
             self.downtime += time.time() - self.last_down
             self.last_down = None
-
-    def record_ocpp_latency(self, start_time, end_time):
-        latency = end_time - start_time
-        self.ocpp_latency.append(latency)
-        self.requests += 1
-
-    def record_ocpp_throughput(self, msg_size):
-        total_latency = sum(self.ocpp_latency) if self.ocpp_latency else 1
-        self.ocpp_throughput = (msg_size * self.requests * 8) / (total_latency * 1_000_000)
     
-    def record_ocpp_session(self, start_time, session_id):
-        self.sessions.append(session_id)
-
     def start_election(self):
         self.last_election_start = time.time()
 
@@ -87,9 +71,6 @@ class MetricsLogger:
             if not self.raft_headers_written:
                 writer.writerow([
                     "Timestamp",
-                    "heartbeat_interval",
-                    "step_down_missed_heartbeats",
-                    "election_interval_spread",
                     "Uptime",
                     "Average Election Time",
                     "Election Count",
@@ -98,49 +79,21 @@ class MetricsLogger:
                 ])
                 self.raft_headers_written = True
             writer.writerow([
-                datetime.now().strftime("%m-%d-%Y_%H:%M:%S"), #Timestamp
-                heartbeat, #heartbeat_interval
-                step_down, #step_down_missed_heartbeats
-                election_spread, #election_interval_spread
+                datetime.now().strftime("%m-%d-%YT%H:%M:%S"), #Timestamp
                 time.time() - self.start_time - sum(self.election_times), #uptime
                 sum(self.election_times) / len(self.election_times) if self.election_times else 0, #Average election time
                 self.election_count, #election count
                 sum(self.raft_message_latencies) / len(self.raft_message_latencies) if self.raft_message_latencies else 0,
-                self.raft_message_throughput,
+                self.raft_message_throughput / (time.time() - self.last_log_time), #That will provide the TPS for the RAFT messages
             ])
         self.reset_raft_metrics()
-
-    def log_ocpp_metrics(self, ocpp_active_clients, ocpp_denied_boots, heartbeat_interval):
-        with open(self.ocpp_file_name, mode='a', newline='') as file:
-            writer = csv.writer(file)
-            if not self.ocpp_headers_written:
-                writer.writerow([
-                    "Timestamp",
-                    "OCPP active clientes",
-                    "OCPP denied cps",
-                    "HeartbeatInterval",
-                ])
-                self.ocpp_headers_written = True
-            writer.writerow([
-                datetime.now().strftime("%m-%d-%Y_%H:%M:%S"),
-                ocpp_active_clients,
-                ocpp_denied_boots,
-                heartbeat_interval
-            ])
-        self.reset_ocpp_metrics()
+        self.last_log_time = time.time()
 
     def reset_raft_metrics(self):
         self.downtime = 0
         self.failures = 0
         self.repairs = 0
         self.election_times = []
-        self.election_count = 0
         self.raft_message_failures = 0
         self.raft_message_latencies = []
         self.raft_message_throughput = 0
-
-    def reset_ocpp_metrics(self):
-        self.ocpp_latency = []
-        self.requests = 0
-        self.ocpp_throughput = 0
-        self.ocpp_message_name = ""

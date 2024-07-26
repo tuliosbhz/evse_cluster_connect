@@ -48,14 +48,25 @@ async def activate_ocpp_server():
     await server.wait_closed()
 
 async def csms_routine():
-    csms_task = None
-    while True:
-        try:
-            if not csms_task:
-                csms_task = asyncio.create_task(activate_ocpp_server())
-            await asyncio.sleep(2)
-        except Exception as e:
-            logging.error(e)
+    csms_task = asyncio.create_task(activate_ocpp_server())
+
+    # Create a task to sleep for the desired duration
+    async def sleep_and_cancel():
+        await asyncio.sleep(14400)  # 14400 seconds = 4 hours
+        logging.info("Timeout reached. Initiating shutdown...")
+        csms_task.cancel()  
+
+    sleep_task = asyncio.create_task(sleep_and_cancel())
+
+    # Wait for either the csms_task to complete or the sleep_task to trigger cancellation
+    done, pending = await asyncio.wait({csms_task, sleep_task}, return_when=asyncio.FIRST_COMPLETED)
+
+    # Gather any pending tasks to ensure they complete
+    if pending:
+        logging.info("Waiting for pending tasks to finish...")
+        await asyncio.gather(*pending)
+    
+    logging.info("OCPP server shut down gracefully.")
 
 async def main():
     await csms_routine()

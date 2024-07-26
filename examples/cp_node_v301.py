@@ -129,7 +129,7 @@ async def simulate_failure(node):
     metrics_logger.downtime += end_recovery_time - start_recovery_time - 5  # Ajusta o tempo de recuperação
 
 class ExperimentManager:
-    def __init__(self, config_path, duration=1200):
+    def __init__(self, config_path, duration=2400):
         self.config_path = config_path
         self.duration = duration
         self.heartbeat = 0.1
@@ -151,17 +151,14 @@ class ExperimentManager:
 
         my_address = config['MY_ADDR'].get('self')
         cluster = [config['NODES_ADDR'][key] for key in config['NODES_ADDR']]
-
+        ip, port = my_address.split(':')
+        ip = ip.split(".")[-1]
+        metrics_logger.raft_file_name = f"benchmark_{ip}_{port}_raft_{datetime.now().strftime('%m-%d-%Y')}.csv"
         server_node = ChargePointManagementNode(my_address, cluster, int(config['SERVER_CONFIG']['port']))
 
         try:
             await server_node.raft_start()
             server_start_task = asyncio.create_task(server_node.csms_routine())
-            #failure_task = asyncio.create_task(self.simulate_failures(server_node,
-            #                                                          heartbeat,
-            #                                                          step_down,
-            #                                                          election_spread))
-
             logging.info(f"Starting experiment with heartbeat={heartbeat}, step_down={step_down}, election_spread={election_spread}")
             asyncio.gather(server_start_task)
             await asyncio.sleep(self.duration)
